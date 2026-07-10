@@ -2,6 +2,13 @@ import streamlit as st
 from datetime import date, timedelta
 from ilustraciones import get_ilustraciones
 
+# Vision IA — opcional, solo si hay API key configurada
+try:
+    from vision_ia import analizar_empaque
+    IA_DISPONIBLE = True
+except ImportError:
+    IA_DISPONIBLE = False
+
 # ─── Configuración de página ───────────────────────────────────────────────
 st.set_page_config(
     page_title="¿Puedo comerlo? | Disco Sopa Pitic",
@@ -320,15 +327,27 @@ st.markdown('<div class="step-label">Paso 2 · ¿Qué dice la etiqueta?</div>', 
 
 col1, col2 = st.columns([1, 1])
 with col1:
+    opciones_fecha = ["📅 Consumo preferente", "⚠️ Fecha de caducidad"]
+    idx_fecha = 0
+    if tipo_fecha_detectado == "caducidad":
+        idx_fecha = 1
     tipo_fecha = st.radio(
         "Tipo de fecha",
-        ["📅 Consumo preferente", "⚠️ Fecha de caducidad"],
+        opciones_fecha,
+        index=idx_fecha,
         label_visibility="collapsed"
     )
 with col2:
+    valor_fecha = date.today()
+    if fecha_detectada:
+        try:
+            from datetime import datetime
+            valor_fecha = datetime.strptime(fecha_detectada, "%Y-%m-%d").date()
+        except Exception:
+            valor_fecha = date.today()
     fecha_producto = st.date_input(
         "Fecha en el empaque",
-        value=date.today(),
+        value=valor_fecha,
         label_visibility="collapsed"
     )
 
@@ -357,38 +376,95 @@ st.markdown("")
 # ─── PASO 3: Estado del empaque ───────────────────────────────────────────
 st.markdown('<div class="step-label">Paso 3 · ¿Cómo está el empaque?</div>', unsafe_allow_html=True)
 
-# ─── Subida de foto ────────────────────────────────────────────────────────
+# ─── Subida de foto + análisis Gemini ─────────────────────────────────────
 st.markdown("""
-<div style="background:#FFFFFF; border-radius:14px; padding:16px 18px; border:2px dashed #A3C4A0; margin-bottom:16px; text-align:center;">
-    <div style="font-size:2rem; margin-bottom:4px;">📷</div>
-    <div style="font-weight:600; color:#1B4332; font-size:0.95rem;">Toma una foto de tu empaque</div>
-    <div style="color:#6B7B6A; font-size:0.82rem; margin-top:4px;">Coloca el empaque en una superficie plana con buena luz y sube la foto aquí</div>
+<div style="background:#FFFFFF;border-radius:14px;padding:16px 18px;border:2px dashed #A3C4A0;margin-bottom:16px;text-align:center;">
+    <div style="font-size:2rem;margin-bottom:4px;">📷</div>
+    <div style="font-weight:600;color:#1B4332;font-size:0.95rem;">Toma una foto de tu empaque</div>
+    <div style="color:#6B7B6A;font-size:0.82rem;margin-top:4px;">Coloca el empaque en una superficie plana con buena luz · enfoca la fecha y el estado del empaque</div>
 </div>
 """, unsafe_allow_html=True)
 
 foto_empaque = st.file_uploader(
     "Sube la foto de tu empaque",
     type=["jpg", "jpeg", "png", "webp"],
-    label_visibility="collapsed",
-    help="Toma la foto con buena luz. Enfoca en las costuras, la tapa y cualquier área dañada."
+    label_visibility="collapsed"
 )
 
+# Variables para pre-llenado por Gemini
+gemini_resultado = None
+producto_detectado = None
+fecha_detectada = None
+tipo_fecha_detectado = None
+
 if foto_empaque is not None:
-    st.markdown('<div class="step-label">Tu empaque</div>', unsafe_allow_html=True)
-    col_foto, col_ref = st.columns([1, 1])
+    imagen_bytes = foto_empaque.read()
+
+    col_foto, col_info = st.columns([1, 1])
     with col_foto:
-        st.image(foto_empaque, caption="Tu empaque", use_container_width=True)
-    with col_ref:
-        st.markdown("""
-        <div style="background:#F0FDF4; border-radius:10px; padding:12px; font-size:0.82rem; color:#065F46; height:100%;">
-            <b>Compara con la guía de abajo ↓</b><br><br>
-            Mira tu foto y busca:<br>
-            🔍 ¿Hay golpes, óxido o hinchazón?<br>
-            🔍 ¿El sellado está intacto?<br>
-            🔍 ¿Hay humedad, manchas o insectos?<br><br>
-            <i>En la versión completa, la app analizará tu foto automáticamente.</i>
-        </div>
-        """, unsafe_allow_html=True)
+        st.image(imagen_bytes, caption="Tu empaque", use_container_width=True)
+
+    # ── Análisis con Gemini ──────────────────────────────────────────────
+    gemini_key = None
+    if IA_DISPONIBLE:
+        try:
+            gemini_key = st.secrets.get("OPENAI_API_KEY", None)
+        except Exception:
+            gemini_key = None
+
+    if IA_DISPONIBLE and gemini_key:
+        with col_info:
+            with st.spinner("🔍 Analizando tu empaque con IA..."):
+                gemini_resultado = analizar_empaque(imagen_bytes, gemini_key)
+
+        if gemini_resultado and gemini_resultado.get("exito"):
+            datos = gemini_resultado["datos"]
+            producto_detectado = datos.get("producto")
+            fecha_detectada = datos.get("fecha")
+            tipo_fecha_detectado = datos.get("tipo_fecha")
+            confianza = datos.get("confianza", "media")
+            mensaje = datos.get("mensaje", "")
+            daños_ia = datos.get("daños", [])
+
+            icono_confianza = {"alta": "✅", "media": "🟡", "baja": "⚠️"}.get(confianza, "🟡")
+
+            with col_info:
+                st.markdown(f"""
+                <div style="background:#F0FDF4;border-radius:10px;padding:14px;font-size:0.85rem;color:#065F46;">
+                    <b>🤖 Gemini detectó:</b><br><br>
+                    📦 <b>{producto_detectado or 'Producto no identificado'}</b><br>
+                    {"📅 Fecha: " + fecha_detectada if fecha_detectada else "📅 Fecha no visible"}<br>
+                    {"⚠️ Daños: " + ", ".join(daños_ia) if daños_ia else "✅ Sin daños visibles"}<br><br>
+                    {icono_confianza} Confianza: <b>{confianza}</b><br>
+                    <i style="font-size:0.78rem;">{mensaje}</i>
+                </div>
+                """, unsafe_allow_html=True)
+
+            if daños_ia:
+                st.info(f"💡 La IA detectó posibles problemas: **{', '.join(daños_ia)}**. Confirma con los checkboxes de abajo.")
+        else:
+            with col_info:
+                error = gemini_resultado.get("error", "Error desconocido") if gemini_resultado else "Error al analizar"
+                st.markdown(f"""
+                <div style="background:#FEF3C7;border-radius:10px;padding:14px;font-size:0.85rem;color:#92400E;">
+                    <b>⚠️ No se pudo analizar automáticamente</b><br>
+                    {error}<br><br>
+                    Continúa marcando los checkboxes manualmente.
+                </div>
+                """, unsafe_allow_html=True)
+    else:
+        with col_info:
+            st.markdown("""
+            <div style="background:#F0FDF4;border-radius:10px;padding:12px;font-size:0.82rem;color:#065F46;height:100%;">
+                <b>Compara con la guía de abajo ↓</b><br><br>
+                Mira tu foto y busca:<br>
+                🔍 ¿Hay golpes, óxido o hinchazón?<br>
+                🔍 ¿El sellado está intacto?<br>
+                🔍 ¿Hay humedad, manchas o insectos?<br><br>
+                <i>Configura tu API key de Gemini para análisis automático.</i>
+            </div>
+            """, unsafe_allow_html=True)
+
     st.markdown("")
 
 # Imágenes de referencia visual (simuladas con HTML)
@@ -398,29 +474,18 @@ st.markdown(get_ilustraciones(tipo_empaque), unsafe_allow_html=True)
 preguntas = PREGUNTAS_EMPAQUE.get(tipo_empaque, PREGUNTAS_EMPAQUE["general"])
 respuestas = []
 
-if "info_visible" not in st.session_state:
-    st.session_state.info_visible = set()
-
-for idx, (pregunta, nivel, explicacion) in enumerate(preguntas):
-    info_key = f"{tipo_empaque}_{idx}"
+for pregunta, nivel, explicacion in preguntas:
     col_check, col_info = st.columns([0.85, 0.15])
     with col_check:
-        resp = st.checkbox(pregunta, key=f"chk_{info_key}")
+        resp = st.checkbox(pregunta)
     with col_info:
-        if st.button("?", key=f"info_{info_key}", help=explicacion):
-            if info_key in st.session_state.info_visible:
-                st.session_state.info_visible.discard(info_key)
-            else:
-                st.session_state.info_visible.add(info_key)
-    if info_key in st.session_state.info_visible:
-        st.caption(f"ℹ️ {explicacion}")
+        if st.button("?", key=f"info_{pregunta[:10]}", help=explicacion):
+            pass
     respuestas.append((resp, nivel, explicacion, pregunta))
 
 st.markdown("")
 
-# ─── PASO 4: Resultado ─────────────────────────────────────────────────────
-st.markdown('<div class="step-label">Paso 4 · Obtén tu resultado</div>', unsafe_allow_html=True)
-
+# ─── RESULTADO ────────────────────────────────────────────────────────────
 if st.button("🔍 Ver resultado", use_container_width=True, type="primary"):
 
     hay_danger = any(r and nivel == "danger" for r, nivel, _, _ in respuestas)
@@ -464,7 +529,7 @@ if st.button("🔍 Ver resultado", use_container_width=True, type="primary"):
         """, unsafe_allow_html=True)
 
     elif decision == "caution":
-        razones = "<br>".join([f"• {exp}" for exp, _ in problemas]) if problemas else "• La fecha ya pasó. Revisa bien antes de consumir."
+        razones = "<br>".join([f"• {p}" for _, p in problemas]) if problemas else "• La fecha ya pasó. Revisa bien antes de consumir."
         st.markdown(f"""
         <div class="result-caution">
             <div class="result-emoji">⚠️</div>
@@ -474,9 +539,12 @@ if st.button("🔍 Ver resultado", use_container_width=True, type="primary"):
             <div class="tip-box">{tip}</div>
         </div>
         """, unsafe_allow_html=True)
+        if problemas:
+            for exp, _ in problemas:
+                st.info(exp)
 
     else:
-        razones = "<br>".join([f"• {exp}" for exp, _ in problemas]) if problemas else "• La fecha de caducidad pasó hace más de dos semanas."
+        razones = "<br>".join([f"• {p}" for _, p in problemas]) if problemas else "• La fecha de caducidad pasó hace más de dos semanas."
         st.markdown(f"""
         <div class="result-danger">
             <div class="result-emoji">🚫</div>
@@ -486,6 +554,9 @@ if st.button("🔍 Ver resultado", use_container_width=True, type="primary"):
             <div class="tip-box">💡 Antes de tirarlo, considera si puede compostarse. ¿Tienes acceso a composta en tu colonia?</div>
         </div>
         """, unsafe_allow_html=True)
+        if problemas:
+            for exp, _ in problemas:
+                st.error(exp)
 
 # ─── Footer ────────────────────────────────────────────────────────────────
 st.markdown("""

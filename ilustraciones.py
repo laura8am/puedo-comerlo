@@ -13,28 +13,18 @@ def svg_card(svg_content, estado, label, sublabel):
     }
     c = colores[estado]
     iconos = {"ok": "🟢", "warn": "🟡", "danger": "🔴"}
-    svg_inline = " ".join(line.strip() for line in svg_content.strip().splitlines())
-    card_style = (
-        f"background:{c['bg']};border:2px solid {c['border']};border-radius:12px;"
-        "padding:12px 8px 10px 8px;text-align:center;flex:1;min-width:130px;"
-    )
-    label_style = f"font-size:0.8rem;font-weight:600;color:{c['text']};margin-top:6px;"
-    sub_style = f"font-size:0.72rem;color:{c['text']};opacity:0.85;margin-top:2px;line-height:1.3;"
-    return (
-        f'<div style="{card_style}">{svg_inline}'
-        f'<div style="{label_style}">{iconos[estado]} {label}</div>'
-        f'<div style="{sub_style}">{sublabel}</div>'
-        '</div>'
-    )
+    estilo = f"background:{c['bg']};border:2px solid {c['border']};border-radius:12px;padding:12px 8px 10px 8px;text-align:center;flex:1;min-width:130px;"
+    etiqueta_estilo = f"font-size:0.8rem;font-weight:600;color:{c['text']};margin-top:6px;"
+    sub_estilo = f"font-size:0.72rem;color:{c['text']};opacity:0.85;margin-top:2px;line-height:1.3;"
+    return f'<div style="{estilo}">{svg_content}<div style="{etiqueta_estilo}">{iconos[estado]} {label}</div><div style="{sub_estilo}">{sublabel}</div></div>'
 
 
 def wrap_row(cards_html):
     """Envuelve las tarjetas en un flex row."""
-    return (
-        '<div style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 6px 0;">'
-        f'{cards_html}'
-        '</div>'
-    )
+    return f"""
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 6px 0;">
+        {cards_html}
+    </div>"""
 
 
 # ─── LATAS ──────────────────────────────────────────────────────────────────

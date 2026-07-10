@@ -1,0 +1,82 @@
+"""
+Módulo de análisis de imágenes con OpenAI Vision (GPT-4o-mini)
+para la app ¿Puedo comerlo? de Disco Sopa Pitic
+"""
+
+import json
+import base64
+import io
+from openai import OpenAI
+from PIL import Image
+
+
+def analizar_empaque(imagen_bytes, api_key):
+    """
+    Analiza una imagen de empaque no perecedero usando OpenAI Vision.
+    Devuelve dict con producto, fecha, tipo_fecha, daños, confianza, mensaje.
+    """
+    client = OpenAI(api_key=api_key)
+
+    imagen_b64 = base64.b64encode(imagen_bytes).decode("utf-8")
+
+    prompt = """Eres un experto en seguridad alimentaria. Analiza esta imagen de un empaque de alimento NO PERECEDERO (lata, pasta, arroz, harina, aceite, salsa, cereal, galletas, conserva, etc.).
+
+Responde ÚNICAMENTE con un JSON válido, sin texto adicional:
+
+{
+  "producto": "nombre del producto que ves",
+  "tipo_empaque": "uno de: lata, empaque_seco, empaque_flexible, botella, frasco, caja, general",
+  "fecha": "fecha en formato YYYY-MM-DD o null si no se ve",
+  "tipo_fecha": "caducidad o consumo_preferente o null",
+  "daños": ["lista de daños visibles: inflada, abombada, oxido, golpe_costura, golpe_cuerpo, roto, perforado, humedad, manchas, moho, insectos, sello_roto, tapa_abombada"],
+  "confianza": "alta, media o baja",
+  "mensaje": "frase corta en español de máximo 15 palabras"
+}"""
+
+    try:
+        respuesta = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {
+                        "url": f"data:image/jpeg;base64,{imagen_b64}",
+                        "detail": "low"
+                    }}
+                ]
+            }],
+            max_tokens=500
+        )
+
+        texto = respuesta.choices[0].message.content.strip()
+        if texto.startswith("```"):
+            texto = texto.split("```")[1]
+            if texto.startswith("json"):
+                texto = texto[4:]
+            texto = texto.strip()
+
+        resultado = json.loads(texto)
+
+        for campo in ["producto", "tipo_empaque", "fecha", "tipo_fecha", "daños", "confianza", "mensaje"]:
+            if campo not in resultado:
+                resultado[campo] = None
+
+        if resultado.get("tipo_empaque") not in ["lata", "empaque_seco", "empaque_flexible", "botella", "frasco", "caja", "general"]:
+            resultado["tipo_empaque"] = "general"
+
+        if not isinstance(resultado.get("daños"), list):
+            resultado["daños"] = []
+
+        return {"exito": True, "datos": resultado}
+
+    except json.JSONDecodeError:
+        return {"exito": False, "error": "No pude leer la respuesta. Intenta con otra foto más clara.", "datos": None}
+    except Exception as e:
+        error_msg = str(e)
+        if "invalid_api_key" in error_msg or "Incorrect API key" in error_msg:
+            return {"exito": False, "error": "API key inválida. Revisa tu clave en los secretos de Streamlit.", "datos": None}
+        elif "quota" in error_msg.lower() or "billing" in error_msg.lower():
+            return {"exito": False, "error": "Sin crédito disponible en OpenAI. Revisa tu cuenta.", "datos": None}
+        else:
+            return {"exito": False, "error": f"Error al analizar: {error_msg}", "datos": None}
