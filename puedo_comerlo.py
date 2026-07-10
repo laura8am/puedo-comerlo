@@ -459,7 +459,7 @@ if st.button("🔍 Ver resultado", use_container_width=True, type="primary"):
         """, unsafe_allow_html=True)
 
     elif decision == "caution":
-        razones = "<br>".join([f"• {p}" for _, p in problemas]) if problemas else "• La fecha ya pasó. Revisa bien antes de consumir."
+        razones = "<br>".join([f"• {exp}" for exp, _ in problemas]) if problemas else "• La fecha ya pasó. Revisa bien antes de consumir."
         st.markdown(f"""
         <div class="result-caution">
             <div class="result-emoji">⚠️</div>
@@ -469,12 +469,9 @@ if st.button("🔍 Ver resultado", use_container_width=True, type="primary"):
             <div class="tip-box">{tip}</div>
         </div>
         """, unsafe_allow_html=True)
-        if problemas:
-            for exp, _ in problemas:
-                st.info(exp)
 
     else:
-        razones = "<br>".join([f"• {p}" for _, p in problemas]) if problemas else "• La fecha de caducidad pasó hace más de dos semanas."
+        razones = "<br>".join([f"• {exp}" for exp, _ in problemas]) if problemas else "• La fecha de caducidad pasó hace más de dos semanas."
         st.markdown(f"""
         <div class="result-danger">
             <div class="result-emoji">🚫</div>
@@ -484,9 +481,6 @@ if st.button("🔍 Ver resultado", use_container_width=True, type="primary"):
             <div class="tip-box">💡 Antes de tirarlo, considera si puede compostarse. ¿Tienes acceso a composta en tu colonia?</div>
         </div>
         """, unsafe_allow_html=True)
-        if problemas:
-            for exp, _ in problemas:
-                st.error(exp)
 
 # ─── Footer ────────────────────────────────────────────────────────────────
 st.markdown("""
