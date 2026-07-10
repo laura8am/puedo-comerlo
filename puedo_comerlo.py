@@ -1,6 +1,13 @@
 import streamlit as st
 from datetime import date
-from vision_ia import analizar_empaque
+
+try:
+    from vision_ia import analizar_empaque
+    IA_DISPONIBLE = True
+except ImportError:
+    IA_DISPONIBLE = False
+    def analizar_empaque(img, key):
+        return {"exito": False, "error": "Módulo IA no disponible."}
 
 st.set_page_config(
     page_title="¿Puedo comerlo?",
