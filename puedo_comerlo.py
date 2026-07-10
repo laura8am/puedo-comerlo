@@ -393,13 +393,22 @@ else:
 preguntas = PREGUNTAS_EMPAQUE.get(tipo_empaque, PREGUNTAS_EMPAQUE["general"])
 respuestas = []
 
-for pregunta, nivel, explicacion in preguntas:
+if "info_visible" not in st.session_state:
+    st.session_state.info_visible = set()
+
+for idx, (pregunta, nivel, explicacion) in enumerate(preguntas):
+    info_key = f"{tipo_empaque}_{idx}"
     col_check, col_info = st.columns([0.85, 0.15])
     with col_check:
-        resp = st.checkbox(pregunta)
+        resp = st.checkbox(pregunta, key=f"chk_{info_key}")
     with col_info:
-        if st.button("?", key=f"info_{pregunta[:10]}", help=explicacion):
-            pass
+        if st.button("?", key=f"info_{info_key}", help=explicacion):
+            if info_key in st.session_state.info_visible:
+                st.session_state.info_visible.discard(info_key)
+            else:
+                st.session_state.info_visible.add(info_key)
+    if info_key in st.session_state.info_visible:
+        st.caption(f"ℹ️ {explicacion}")
     respuestas.append((resp, nivel, explicacion, pregunta))
 
 st.markdown("")
