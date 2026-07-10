@@ -413,7 +413,9 @@ for idx, (pregunta, nivel, explicacion) in enumerate(preguntas):
 
 st.markdown("")
 
-# ─── RESULTADO ────────────────────────────────────────────────────────────
+# ─── PASO 4: Resultado ─────────────────────────────────────────────────────
+st.markdown('<div class="step-label">Paso 4 · Obtén tu resultado</div>', unsafe_allow_html=True)
+
 if st.button("🔍 Ver resultado", use_container_width=True, type="primary"):
 
     hay_danger = any(r and nivel == "danger" for r, nivel, _, _ in respuestas)
