@@ -322,6 +322,12 @@ with st.container():
 
 st.markdown("")
 
+# Variables para pre-llenado por IA — se actualizan si el usuario sube foto
+gemini_resultado = None
+producto_detectado = None
+fecha_detectada = None
+tipo_fecha_detectado = None
+
 # ─── PASO 2: Fecha ────────────────────────────────────────────────────────
 st.markdown('<div class="step-label">Paso 2 · ¿Qué dice la etiqueta?</div>', unsafe_allow_html=True)
 
@@ -390,12 +396,6 @@ foto_empaque = st.file_uploader(
     type=["jpg", "jpeg", "png", "webp"],
     label_visibility="collapsed"
 )
-
-# Variables para pre-llenado por Gemini
-gemini_resultado = None
-producto_detectado = None
-fecha_detectada = None
-tipo_fecha_detectado = None
 
 if foto_empaque is not None:
     imagen_bytes = foto_empaque.read()
