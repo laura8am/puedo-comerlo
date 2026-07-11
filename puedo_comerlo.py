@@ -228,7 +228,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ─── Datos del producto ────────────────────────────────────────────────────
-PRODUCTOS = {
+PRODUCTOS_NO_PERECEDEROS = {
     "🥫  Lata (atún, frijoles, vegetales, chiles...)": "lata",
     "🍝  Pasta (spaghetti, macarrón, codito...)": "empaque_seco",
     "🌾  Arroz": "empaque_seco",
@@ -243,6 +243,16 @@ PRODUCTOS = {
     "🥫  Conserva en frasco (mermelada, miel, salsa...)": "frasco",
     "📦  Otro no perecedero": "general",
 }
+
+PRODUCTOS_PERECEDEROS = {
+    "🥛  Lácteos (leche, yogurt, queso, crema)": "lacteos",
+    "🍗  Carne, pollo o pescado": "carne_pescado",
+    "🍎  Fruta o verdura fresca": "fruta_verdura",
+    "🍞  Pan o panadería fresca": "panaderia_fresca",
+}
+
+PRODUCTOS = {**PRODUCTOS_NO_PERECEDEROS, **PRODUCTOS_PERECEDEROS}
+CATEGORIAS_PERECEDERAS = set(PRODUCTOS_PERECEDEROS.values())
 
 PREGUNTAS_EMPAQUE = {
     "lata": [
@@ -311,6 +321,44 @@ PREGUNTAS_EMPAQUE = {
         ("¿El producto huele diferente al normal?", "warning",
          "Un olor inusual siempre es señal de revisar."),
     ],
+    "lacteos": [
+        ("¿Hay grumos o separación anormal en la textura?", "danger",
+         "Indica que el lácteo se cortó o fermentó de forma no controlada."),
+        ("¿Ves moho (manchas verdes, negras o blancas afelpadas)?", "danger",
+         "El moho en lácteos puede producir toxinas peligrosas."),
+        ("¿Huele agrio, rancio o diferente al abrirlo?", "danger",
+         "Un olor agrio fuera de lo normal indica descomposición."),
+        ("¿El empaque está hinchado o el sello roto?", "warning",
+         "Puede indicar fermentación por bacterias."),
+    ],
+    "carne_pescado": [
+        ("¿Tiene un olor fuerte, agrio o a amoniaco?", "danger",
+         "Señal clara de descomposición bacteriana."),
+        ("¿El color cambió a gris, verdoso o muy oscuro?", "danger",
+         "Los cambios de color indican deterioro avanzado."),
+        ("¿La textura está pegajosa o babosa?", "danger",
+         "Indica crecimiento bacteriano en la superficie."),
+        ("¿Lleva más de 1-2 días refrigerado sin cocinar ni congelar?", "warning",
+         "La carne y el pescado crudos se deben cocinar o congelar pronto."),
+    ],
+    "fruta_verdura": [
+        ("¿Hay moho visible?", "danger",
+         "El moho puede haberse extendido más allá de lo visible."),
+        ("¿Está muy blanda, líquida o con mal olor?", "danger",
+         "Señal de descomposición avanzada."),
+        ("¿Tiene manchas oscuras grandes o magulladuras profundas?", "warning",
+         "A veces se puede cortar la parte dañada si el resto se ve y huele bien."),
+        ("¿Ha pasado ya bastante tiempo desde que la compraste?", "warning",
+         "Cada fruta o verdura tiene su propio tiempo de vida útil."),
+    ],
+    "panaderia_fresca": [
+        ("¿Hay moho visible (manchas verdes, blancas o negras)?", "danger",
+         "El moho en pan se extiende más allá de lo visible; no cortes y comas el resto."),
+        ("¿Huele a alcohol, agrio o raro?", "danger",
+         "Indica fermentación no deseada."),
+        ("¿Está duro, seco o con textura rara pero sin moho ni mal olor?", "warning",
+         "Suele ser solo pérdida de calidad, no necesariamente peligroso."),
+    ],
 }
 
 TIPS_POR_PRODUCTO = {
@@ -321,18 +369,30 @@ TIPS_POR_PRODUCTO = {
     "caja": "💡 Los cereales abiertos, guardados en bolsa hermética, duran semanas más allá de la fecha.",
     "empaque_flexible": "💡 Las galletas 'pasadas' de fecha a menudo solo pierden textura (están blandas), no son peligrosas si el empaque estaba cerrado.",
     "general": "💡 La mayoría de los no perecederos siguen siendo seguros después de la fecha si el empaque está en buen estado.",
+    "lacteos": "💡 Los lácteos deben mantenerse refrigerados siempre. Si hay duda sobre el olor o la textura, mejor no arriesgarse.",
+    "carne_pescado": "💡 La carne y el pescado crudos son de los alimentos más riesgosos. Cocina bien y evita dejarlos a temperatura ambiente.",
+    "fruta_verdura": "💡 Muchas frutas y verduras se pueden recuperar cortando la parte dañada, si el resto se ve y huele bien.",
+    "panaderia_fresca": "💡 El pan fresco sin conservadores dura pocos días a temperatura ambiente. Congélalo si no lo vas a comer pronto.",
 }
 
 # ─── PASO 1: Producto ──────────────────────────────────────────────────────
 st.markdown('<div class="step-label">Paso 1 · ¿Qué tienes?</div>', unsafe_allow_html=True)
 
 with st.container():
-    producto_seleccionado = st.selectbox(
-        "Elige el tipo de alimento",
-        options=list(PRODUCTOS.keys()),
+    OPCIONES_CATEGORIA = ["📦 No perecedero", "🥛 Perecedero"]
+    categoria_producto = st.radio(
+        "Categoría",
+        OPCIONES_CATEGORIA,
+        horizontal=True,
         label_visibility="collapsed"
     )
-    tipo_empaque = PRODUCTOS[producto_seleccionado]
+    opciones_producto = PRODUCTOS_PERECEDEROS if categoria_producto == OPCIONES_CATEGORIA[1] else PRODUCTOS_NO_PERECEDEROS
+    producto_seleccionado = st.selectbox(
+        "Elige el tipo de alimento",
+        options=list(opciones_producto.keys()),
+        label_visibility="collapsed"
+    )
+    tipo_empaque = opciones_producto[producto_seleccionado]
 
 st.markdown("")
 
@@ -508,7 +568,14 @@ if st.button("🔍 Ver resultado", use_container_width=True, type="primary"):
     problemas = [(exp, p) for r, nivel, exp, p in respuestas if r]
 
     # Lógica de decisión
+    # Los perecederos no tienen el mismo margen de gracia que los no perecederos:
+    # una fecha de caducidad vencida es motivo de alerta de inmediato, sin días
+    # de tolerancia, y "consumo preferente" vencido también pesa mucho más pronto.
+    es_perecedero_actual = tipo_empaque in CATEGORIAS_PERECEDERAS
+
     if hay_danger:
+        decision = "danger"
+    elif es_perecedero_actual and es_caducidad and dias_diferencia < 0:
         decision = "danger"
     elif hay_warning and es_caducidad and dias_diferencia < -30:
         decision = "danger"
@@ -518,7 +585,9 @@ if st.button("🔍 Ver resultado", use_container_width=True, type="primary"):
         decision = "caution"
     elif es_caducidad and dias_diferencia < 0:
         decision = "caution"
-    elif not es_caducidad and dias_diferencia < -365:
+    elif es_perecedero_actual and not es_caducidad and dias_diferencia < -3:
+        decision = "caution"
+    elif not es_perecedero_actual and not es_caducidad and dias_diferencia < -365:
         decision = "caution"
     else:
         decision = "safe"
