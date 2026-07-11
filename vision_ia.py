@@ -37,8 +37,8 @@ Guía para "tipo_empaque" en perecederos:
 - "lacteos": leche, yogurt, queso, crema.
 - "carne_pescado": carne, pollo, pescado o mariscos crudos o cocidos.
 - "fruta_verdura": fruta o verdura fresca.
-- "panaderia_fresca": pan o repostería fresca sin conservadores.
-Si es un no perecedero, usa la categoría de empaque que corresponda (lata, empaque_seco, empaque_flexible, botella, frasco, caja) o "general" si no encaja en ninguna."""
+- "panaderia_fresca": pan, repostería fresca sin conservadores, o tortillas de tortillería/caseras sin empaque.
+Si es un no perecedero, usa la categoría de empaque que corresponda (lata, empaque_seco, empaque_flexible, botella, frasco, caja) o "general" si no encaja en ninguna. Las tortillas empacadas de bolsa de tienda (con fecha impresa) van en "empaque_flexible"."""
 
     try:
         respuesta = client.chat.completions.create(
