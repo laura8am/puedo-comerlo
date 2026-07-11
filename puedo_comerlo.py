@@ -22,10 +22,17 @@ st.markdown("""
 
 *, html, body, [class*="css"] {
     font-family: 'Inter', sans-serif !important;
-    background-color: #FFFFFF;
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
 }
 
-.stApp { background-color: #FFFFFF; }
+.stApp {
+    background-color: #FFFFFF !important;
+}
+
+section[data-testid="stSidebar"] {
+    display: none;
+}
 
 .block-container {
     padding-top: 2rem;
