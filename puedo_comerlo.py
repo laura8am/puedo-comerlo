@@ -1,5 +1,5 @@
 import streamlit as st
-from datetime import date, timedelta
+from datetime import date
 from ilustraciones import get_ilustraciones
 
 try:
@@ -385,6 +385,32 @@ DAÑOS_A_PALABRAS_CLAVE = {
     "textura_pegajosa": ["pegajosa", "babosa", "grumos", "textura"],
 }
 
+# Texto legible para mostrarle al usuario los daños que detectó la IA
+# (las etiquetas que devuelve el modelo son códigos internos en inglés/snake_case).
+DAÑOS_ETIQUETAS = {
+    "inflada": "inflada",
+    "abombada": "abombada",
+    "oxido": "óxido",
+    "golpe_costura": "golpe en costura",
+    "golpe_cuerpo": "golpe en el cuerpo",
+    "roto": "roto",
+    "perforado": "perforado",
+    "humedad": "humedad",
+    "manchas": "manchas",
+    "moho": "moho",
+    "insectos": "insectos",
+    "sello_roto": "sello roto",
+    "tapa_abombada": "tapa abombada",
+    "agrio": "olor agrio",
+    "decolorado": "decolorado",
+    "textura_pegajosa": "textura pegajosa",
+}
+
+
+def _daño_legible(tag):
+    tag_norm = str(tag).strip().lower()
+    return DAÑOS_ETIQUETAS.get(tag_norm, tag_norm.replace("_", " "))
+
 
 def _valor_o_none(valor):
     """La IA a veces devuelve el texto 'null' en vez de un valor vacío real."""
@@ -607,7 +633,7 @@ if foto_empaque is not None:
                     <span class="ia-tag">IA</span><br>
                     <b>{producto_detectado or 'No identificado'}</b><br>
                     {linea_fecha}
-                    {"⚠️ " + ", ".join(daños_ia) if daños_ia else "✅ Sin daños visibles"}<br>
+                    {"⚠️ " + ", ".join(_daño_legible(d) for d in daños_ia) if daños_ia else "✅ Sin daños visibles"}<br>
                     <span style="color:#6B7B6A;font-size:0.75rem;">Confianza: {confianza}</span>{aviso_categoria}
                 </div>
                 """, unsafe_allow_html=True)
