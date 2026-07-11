@@ -5,9 +5,7 @@ para la app ¿Puedo comerlo? de Disco Sopa Pitic
 
 import json
 import base64
-import io
 from openai import OpenAI
-from PIL import Image
 
 
 def analizar_empaque(imagen_bytes, api_key):
