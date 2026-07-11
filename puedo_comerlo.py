@@ -313,6 +313,49 @@ PREGUNTAS_EMPAQUE = {
     ],
 }
 
+# Palabras clave para relacionar cada etiqueta de daño que devuelve la IA con
+# las preguntas de Paso 3, y así poder marcar automáticamente las casillas que
+# correspondan a lo que la IA detectó en la foto.
+DAÑOS_A_PALABRAS_CLAVE = {
+    "inflada": ["inflada", "abombada"],
+    "abombada": ["abombada", "inflada"],
+    "oxido": ["óxido"],
+    "golpe_costura": ["costura"],
+    "golpe_cuerpo": ["golpe"],
+    "roto": ["rota", "roto", "rasgad"],
+    "perforado": ["perforad"],
+    "humedad": ["húmeda", "humedad", "mojada"],
+    "manchas": ["manchas"],
+    "moho": ["moho"],
+    "insectos": ["insectos", "gusanos", "infestación"],
+    "sello_roto": ["sello"],
+    "tapa_abombada": ["tapa", "abombada"],
+}
+
+
+def _valor_o_none(valor):
+    """La IA a veces devuelve el texto 'null' en vez de un valor vacío real."""
+    if isinstance(valor, str) and valor.strip().lower() in ("null", "none", ""):
+        return None
+    return valor
+
+
+def _preguntas_a_marcar(tipo_empaque, daños_detectados):
+    """Índices de las preguntas de Paso 3 que coinciden con los daños que la IA vio en la foto."""
+    preguntas_tipo = PREGUNTAS_EMPAQUE.get(tipo_empaque, PREGUNTAS_EMPAQUE["general"])
+    idxs = set()
+    for daño in daños_detectados:
+        tag = str(_valor_o_none(daño) or "").strip().lower()
+        if not tag:
+            continue
+        palabras_clave = DAÑOS_A_PALABRAS_CLAVE.get(tag, [tag])
+        for idx, (pregunta, _, _) in enumerate(preguntas_tipo):
+            pregunta_norm = pregunta.lower()
+            if any(kw in pregunta_norm for kw in palabras_clave):
+                idxs.add(idx)
+    return idxs
+
+
 TIPS_POR_PRODUCTO = {
     "lata": "💡 Las latas sin daño duran mucho más allá de la fecha de consumo preferente. Una lata de 2019 en buen estado puede seguir siendo segura.",
     "empaque_seco": "💡 Guarda arroz, frijol y pasta en recipientes herméticos de vidrio o plástico duro. Duran años en buen estado.",
@@ -436,7 +479,17 @@ if foto_empaque is not None:
                 with st.spinner("Analizando..."):
                     ia_resultado = analizar_empaque(img_bytes, ia_key)
             if ia_resultado and ia_resultado.get("exito"):
-                st.session_state.ia_datos = ia_resultado["datos"]
+                datos = ia_resultado["datos"]
+                datos["producto"] = _valor_o_none(datos.get("producto"))
+                datos["fecha"] = _valor_o_none(datos.get("fecha"))
+                datos["tipo_fecha"] = _valor_o_none(datos.get("tipo_fecha"))
+                daños_detectados = [d for d in (datos.get("daños") or []) if _valor_o_none(d)]
+                datos["daños"] = daños_detectados
+
+                for idx in _preguntas_a_marcar(tipo_empaque, daños_detectados):
+                    st.session_state[f"chk_{tipo_empaque}_{idx}"] = True
+
+                st.session_state.ia_datos = datos
                 st.session_state.ia_foto_id = foto_id
                 st.rerun()
             else:
