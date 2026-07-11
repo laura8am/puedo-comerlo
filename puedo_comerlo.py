@@ -442,6 +442,8 @@ with st.container():
     )
     tipo_empaque = opciones_producto[producto_seleccionado]
 
+es_perecedero_actual = tipo_empaque in CATEGORIAS_PERECEDERAS
+
 st.markdown("")
 
 # ─── Variables IA ────────────────────────────────────────────────────────
@@ -456,51 +458,65 @@ fecha_detectada = st.session_state.ia_datos.get("fecha")
 tipo_fecha_detectado = st.session_state.ia_datos.get("tipo_fecha")
 
 # ─── PASO 2: Fecha ────────────────────────────────────────────────────────
-st.markdown('<div class="step-label">Paso 2 · ¿Qué dice la etiqueta?</div>', unsafe_allow_html=True)
+# Los perecederos casi nunca traen una fecha de caducidad/consumo preferente
+# impresa (son frescos, sin empaque de fábrica), así que este paso se salta
+# por completo y la evaluación depende solo del estado del alimento (Paso 3).
+es_caducidad = False
+dias_diferencia = 0
 
-col1, col2 = st.columns([1, 1])
-with col1:
-    opciones_fecha = ["📅 Consumo preferente", "⚠️ Fecha de caducidad"]
-    idx_fecha = 1 if tipo_fecha_detectado == "caducidad" else 0
-    tipo_fecha = st.radio(
-        "Tipo de fecha",
-        opciones_fecha,
-        index=idx_fecha,
-        label_visibility="collapsed"
-    )
-with col2:
-    valor_fecha = date.today()
-    if fecha_detectada:
-        try:
-            from datetime import datetime
-            valor_fecha = datetime.strptime(fecha_detectada, "%Y-%m-%d").date()
-        except Exception:
-            pass
-    fecha_producto = st.date_input(
-        "Fecha en el empaque",
-        value=valor_fecha,
-        label_visibility="collapsed"
-    )
-
-# Explicación de la diferencia
-es_caducidad = "caducidad" in tipo_fecha.lower()
-hoy = date.today()
-dias_diferencia = (fecha_producto - hoy).days
-
-if not es_caducidad:
+if es_perecedero_actual:
+    st.markdown('<div class="step-label">Paso 2 · Estado del alimento</div>', unsafe_allow_html=True)
     st.markdown("""
     <div class="diff-box">
-        <b>Consumo preferente</b> = el fabricante garantiza la mejor calidad hasta esa fecha.<br>
-        Después de ella, el alimento puede seguir siendo <b>seguro</b>, aunque puede cambiar en sabor o textura.
+        Los perecederos no suelen traer una fecha de caducidad impresa. Vamos directo a revisar su estado en el siguiente paso.
     </div>
     """, unsafe_allow_html=True)
 else:
-    st.markdown("""
-    <div class="diff-box" style="border-color: #F97316; background: #FFF7ED;">
-        <b>Fecha de caducidad</b> = el alimento puede no ser seguro después de esta fecha.<br>
-        A diferencia del consumo preferente, aquí sí importa mucho no pasarla.
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown('<div class="step-label">Paso 2 · ¿Qué dice la etiqueta?</div>', unsafe_allow_html=True)
+
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        opciones_fecha = ["📅 Consumo preferente", "⚠️ Fecha de caducidad"]
+        idx_fecha = 1 if tipo_fecha_detectado == "caducidad" else 0
+        tipo_fecha = st.radio(
+            "Tipo de fecha",
+            opciones_fecha,
+            index=idx_fecha,
+            label_visibility="collapsed"
+        )
+    with col2:
+        valor_fecha = date.today()
+        if fecha_detectada:
+            try:
+                from datetime import datetime
+                valor_fecha = datetime.strptime(fecha_detectada, "%Y-%m-%d").date()
+            except Exception:
+                pass
+        fecha_producto = st.date_input(
+            "Fecha en el empaque",
+            value=valor_fecha,
+            label_visibility="collapsed"
+        )
+
+    # Explicación de la diferencia
+    es_caducidad = "caducidad" in tipo_fecha.lower()
+    hoy = date.today()
+    dias_diferencia = (fecha_producto - hoy).days
+
+    if not es_caducidad:
+        st.markdown("""
+        <div class="diff-box">
+            <b>Consumo preferente</b> = el fabricante garantiza la mejor calidad hasta esa fecha.<br>
+            Después de ella, el alimento puede seguir siendo <b>seguro</b>, aunque puede cambiar en sabor o textura.
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div class="diff-box" style="border-color: #F97316; background: #FFF7ED;">
+            <b>Fecha de caducidad</b> = el alimento puede no ser seguro después de esta fecha.<br>
+            A diferencia del consumo preferente, aquí sí importa mucho no pasarla.
+        </div>
+        """, unsafe_allow_html=True)
 
 st.markdown("")
 
@@ -635,14 +651,10 @@ if st.button("🔍 Ver resultado", use_container_width=True, type="primary"):
     problemas = [(exp, p) for r, nivel, exp, p in respuestas if r]
 
     # Lógica de decisión
-    # Los perecederos no tienen el mismo margen de gracia que los no perecederos:
-    # una fecha de caducidad vencida es motivo de alerta de inmediato, sin días
-    # de tolerancia, y "consumo preferente" vencido también pesa mucho más pronto.
-    es_perecedero_actual = tipo_empaque in CATEGORIAS_PERECEDERAS
-
+    # Los perecederos (es_perecedero_actual) se saltan el Paso 2, así que
+    # es_caducidad queda en False y dias_diferencia en 0: la decisión depende
+    # solo de las respuestas del Paso 3 (hay_danger / hay_warning).
     if hay_danger:
-        decision = "danger"
-    elif es_perecedero_actual and es_caducidad and dias_diferencia < 0:
         decision = "danger"
     elif hay_warning and es_caducidad and dias_diferencia < -30:
         decision = "danger"
@@ -652,15 +664,15 @@ if st.button("🔍 Ver resultado", use_container_width=True, type="primary"):
         decision = "caution"
     elif es_caducidad and dias_diferencia < 0:
         decision = "caution"
-    elif es_perecedero_actual and not es_caducidad and dias_diferencia < -3:
-        decision = "caution"
     elif not es_perecedero_actual and not es_caducidad and dias_diferencia < -365:
         decision = "caution"
     else:
         decision = "safe"
 
-    # Mensaje de días
-    if dias_diferencia > 0:
+    # Mensaje de días (los perecederos no tienen fecha, así que no aplica)
+    if es_perecedero_actual:
+        estado_fecha = ""
+    elif dias_diferencia > 0:
         estado_fecha = f"Faltan {dias_diferencia} días para la fecha indicada."
     elif dias_diferencia == 0:
         estado_fecha = "Hoy es el último día de la fecha indicada."
@@ -668,13 +680,15 @@ if st.button("🔍 Ver resultado", use_container_width=True, type="primary"):
         estado_fecha = f"Lleva {abs(dias_diferencia)} días pasado la fecha indicada."
 
     tip = TIPS_POR_PRODUCTO.get(tipo_empaque, "")
+    fila_estado_fecha = f'<div class="result-reason">{estado_fecha}</div>' if estado_fecha else ""
 
     if decision == "safe":
+        razon_safe = f"{estado_fecha} El empaque está en buen estado y no encontramos señales de riesgo." if estado_fecha else "No encontramos señales de riesgo en su estado."
         st.markdown(f"""
         <div class="result-safe">
             <div class="result-emoji">✅</div>
             <div class="result-title">Puedes comerlo</div>
-            <div class="result-reason">{estado_fecha} El empaque está en buen estado y no encontramos señales de riesgo.</div>
+            <div class="result-reason">{razon_safe}</div>
             <div class="tip-box">{tip}</div>
         </div>
         """, unsafe_allow_html=True)
@@ -685,7 +699,7 @@ if st.button("🔍 Ver resultado", use_container_width=True, type="primary"):
         <div class="result-caution">
             <div class="result-emoji">⚠️</div>
             <div class="result-title">Revisa antes de comer</div>
-            <div class="result-reason">{estado_fecha}</div>
+            {fila_estado_fecha}
             <div class="result-reason">{razones}</div>
             <div class="tip-box">{tip}</div>
         </div>
@@ -697,7 +711,7 @@ if st.button("🔍 Ver resultado", use_container_width=True, type="primary"):
         <div class="result-danger">
             <div class="result-emoji">🚫</div>
             <div class="result-title">No lo consumas</div>
-            <div class="result-reason">{estado_fecha}</div>
+            {fila_estado_fecha}
             <div class="result-reason">{razones}</div>
             <div class="tip-box">💡 Antes de tirarlo, considera si puede compostarse. ¿Tienes acceso a composta en tu colonia?</div>
         </div>
