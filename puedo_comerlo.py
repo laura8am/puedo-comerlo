@@ -238,6 +238,7 @@ PRODUCTOS_NO_PERECEDEROS = {
     "🍅  Salsa, ketchup o aderezo embotellado": "botella",
     "🥣  Cereal o avena": "caja",
     "🍪  Galletas o pan de caja": "empaque_flexible",
+    "🫓  Tortillas empacadas (bolsa de tienda, con fecha)": "empaque_flexible",
     "☕  Café, té o cacao": "empaque_flexible",
     "🧂  Azúcar, sal o especias": "empaque_seco",
     "🥫  Conserva en frasco (mermelada, miel, salsa...)": "frasco",
@@ -249,6 +250,7 @@ PRODUCTOS_PERECEDEROS = {
     "🍗  Carne, pollo o pescado": "carne_pescado",
     "🍎  Fruta o verdura fresca": "fruta_verdura",
     "🍞  Pan o panadería fresca": "panaderia_fresca",
+    "🫓  Tortillas de tortillería o caseras (sin empaque)": "panaderia_fresca",
 }
 
 PRODUCTOS = {**PRODUCTOS_NO_PERECEDEROS, **PRODUCTOS_PERECEDEROS}
