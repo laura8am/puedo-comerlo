@@ -19,19 +19,21 @@ def analizar_empaque(imagen_bytes, api_key):
 
     imagen_b64 = base64.b64encode(imagen_bytes).decode("utf-8")
 
-    prompt = """Eres un experto en seguridad alimentaria. Analiza esta imagen de un empaque de alimento NO PERECEDERO (lata, pasta, arroz, harina, aceite, salsa, cereal, galletas, conserva, etc.).
+    prompt = """Eres un experto en seguridad alimentaria. Analiza esta imagen de un alimento. Esta app está diseñada para alimentos NO PERECEDEROS (lata, pasta, arroz, harina, aceite, salsa, cereal, galletas, conserva, etc.), pero también identifica si es un PERECEDERO (carne, lácteos, frutas, verduras, panadería fresca, sobras, etc.) para poder avisarle al usuario.
 
 Responde ÚNICAMENTE con un JSON válido, sin texto adicional:
 
 {
   "producto": "nombre del producto que ves",
-  "tipo_empaque": "uno de: lata, empaque_seco, empaque_flexible, botella, frasco, caja, general",
+  "tipo_empaque": "uno de: lata, empaque_seco, empaque_flexible, botella, frasco, caja, general, perecedero",
   "fecha": "fecha en formato YYYY-MM-DD o null si no se ve",
   "tipo_fecha": "caducidad o consumo_preferente o null",
   "daños": ["lista de daños visibles: inflada, abombada, oxido, golpe_costura, golpe_cuerpo, roto, perforado, humedad, manchas, moho, insectos, sello_roto, tapa_abombada"],
   "confianza": "alta, media o baja",
   "mensaje": "frase corta en español de máximo 15 palabras"
-}"""
+}
+
+Usa "tipo_empaque": "perecedero" si el alimento es carne, pescado, lácteos, fruta, verdura, pan/panadería fresca, o cualquier cosa que normalmente se guarda en refrigeración y no tiene un empaque sellado de fábrica."""
 
     try:
         respuesta = client.chat.completions.create(
@@ -62,7 +64,7 @@ Responde ÚNICAMENTE con un JSON válido, sin texto adicional:
             if campo not in resultado:
                 resultado[campo] = None
 
-        if resultado.get("tipo_empaque") not in ["lata", "empaque_seco", "empaque_flexible", "botella", "frasco", "caja", "general"]:
+        if resultado.get("tipo_empaque") not in ["lata", "empaque_seco", "empaque_flexible", "botella", "frasco", "caja", "general", "perecedero"]:
             resultado["tipo_empaque"] = "general"
 
         if not isinstance(resultado.get("daños"), list):
