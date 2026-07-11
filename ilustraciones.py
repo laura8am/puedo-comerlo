@@ -169,6 +169,110 @@ CAJA_DANGER = """
 </svg>"""
 
 
+# ─── FRUTA Y VERDURA ────────────────────────────────────────────────────────
+
+FRUTA_OK = """
+<svg viewBox="0 0 80 90" width="80" height="90" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="40" cy="50" rx="26" ry="28" fill="#f87171"/>
+  <ellipse cx="30" cy="38" rx="10" ry="12" fill="#fca5a5" opacity="0.4"/>
+  <rect x="37" y="16" width="6" height="14" rx="3" fill="#65a30d"/>
+  <path d="M43,20 Q54,14 58,22" stroke="#65a30d" stroke-width="3" fill="none"/>
+</svg>"""
+
+FRUTA_WARN = """
+<svg viewBox="0 0 80 90" width="80" height="90" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="40" cy="50" rx="26" ry="28" fill="#f87171"/>
+  <ellipse cx="30" cy="38" rx="10" ry="12" fill="#fca5a5" opacity="0.4"/>
+  <rect x="37" y="16" width="6" height="14" rx="3" fill="#65a30d"/>
+  <path d="M43,20 Q54,14 58,22" stroke="#65a30d" stroke-width="3" fill="none"/>
+  <ellipse cx="52" cy="60" rx="9" ry="7" fill="#92400e" opacity="0.55"/>
+</svg>"""
+
+FRUTA_DANGER = """
+<svg viewBox="0 0 80 90" width="80" height="90" xmlns="http://www.w3.org/2000/svg">
+  <path d="M40,20 C20,20 14,40 18,58 C22,76 34,80 40,80 C46,80 58,76 62,58 C66,40 60,20 40,20 Z" fill="#dc9a6f"/>
+  <rect x="37" y="14" width="6" height="12" rx="3" fill="#78350f"/>
+  <circle cx="30" cy="48" r="6" fill="#3f6212" opacity="0.8"/>
+  <circle cx="46" cy="58" r="5" fill="#1a2e05" opacity="0.75"/>
+  <circle cx="36" cy="64" r="4" fill="#3f6212" opacity="0.7"/>
+</svg>"""
+
+
+# ─── LÁCTEOS ────────────────────────────────────────────────────────────────
+
+LACTEOS_OK = """
+<svg viewBox="0 0 80 90" width="80" height="90" xmlns="http://www.w3.org/2000/svg">
+  <path d="M20,26 L20,80 L60,80 L60,26 L50,14 L30,14 Z" fill="#f8fafc"/>
+  <path d="M20,26 L60,26 L50,14 L30,14 Z" fill="#e2e8f0"/>
+  <rect x="20" y="42" width="40" height="14" fill="#93c5fd" opacity="0.6"/>
+</svg>"""
+
+LACTEOS_WARN = """
+<svg viewBox="0 0 80 90" width="80" height="90" xmlns="http://www.w3.org/2000/svg">
+  <path d="M20,26 L20,80 L60,80 L60,26 L50,14 L30,14 Z" fill="#f8fafc"/>
+  <path d="M20,26 L60,26 L50,14 L30,14 Z" fill="#e2e8f0"/>
+  <rect x="20" y="42" width="40" height="14" fill="#93c5fd" opacity="0.6"/>
+  <ellipse cx="40" cy="60" rx="12" ry="6" fill="#fcd34d" opacity="0.8"/>
+</svg>"""
+
+LACTEOS_DANGER = """
+<svg viewBox="0 0 80 90" width="80" height="90" xmlns="http://www.w3.org/2000/svg">
+  <path d="M16,26 Q10,55 16,80 L64,80 Q70,55 64,26 L50,14 L30,14 Z" fill="#f8fafc"/>
+  <path d="M16,26 L64,26 L50,14 L30,14 Z" fill="#e2e8f0"/>
+  <circle cx="30" cy="52" r="6" fill="#065f46" opacity="0.75"/>
+  <circle cx="46" cy="62" r="5" fill="#064e3b" opacity="0.7"/>
+</svg>"""
+
+
+# ─── CARNE Y PESCADO ────────────────────────────────────────────────────────
+
+CARNE_OK = """
+<svg viewBox="0 0 80 90" width="80" height="90" xmlns="http://www.w3.org/2000/svg">
+  <path d="M18,45 Q14,25 34,20 Q58,16 64,36 Q68,54 50,64 Q30,74 18,58 Q12,50 18,45 Z" fill="#f87171"/>
+  <path d="M24,46 Q32,40 42,46 Q52,52 44,58 Q34,64 26,56 Q20,50 24,46 Z" fill="#fca5a5" opacity="0.5"/>
+</svg>"""
+
+CARNE_WARN = """
+<svg viewBox="0 0 80 90" width="80" height="90" xmlns="http://www.w3.org/2000/svg">
+  <path d="M18,45 Q14,25 34,20 Q58,16 64,36 Q68,54 50,64 Q30,74 18,58 Q12,50 18,45 Z" fill="#f87171"/>
+  <path d="M24,46 Q32,40 42,46 Q52,52 44,58 Q34,64 26,56 Q20,50 24,46 Z" fill="#fca5a5" opacity="0.5"/>
+  <ellipse cx="50" cy="35" rx="10" ry="7" fill="#a8a29e" opacity="0.55"/>
+</svg>"""
+
+CARNE_DANGER = """
+<svg viewBox="0 0 80 90" width="80" height="90" xmlns="http://www.w3.org/2000/svg">
+  <path d="M18,45 Q14,25 34,20 Q58,16 64,36 Q68,54 50,64 Q30,74 18,58 Q12,50 18,45 Z" fill="#8a8a6d"/>
+  <circle cx="30" cy="40" r="5" fill="#374151" opacity="0.6"/>
+  <circle cx="46" cy="52" r="4" fill="#1f2937" opacity="0.6"/>
+  <circle cx="38" cy="60" r="3.5" fill="#374151" opacity="0.55"/>
+</svg>"""
+
+
+# ─── PAN Y PANADERÍA FRESCA ─────────────────────────────────────────────────
+
+PAN_OK = """
+<svg viewBox="0 0 80 90" width="80" height="90" xmlns="http://www.w3.org/2000/svg">
+  <path d="M14,50 Q14,26 40,24 Q66,26 66,50 L66,66 Q66,76 56,76 L24,76 Q14,76 14,66 Z" fill="#d97706"/>
+  <path d="M20,50 Q40,42 60,50" stroke="#92400e" stroke-width="2" fill="none" opacity="0.5"/>
+  <path d="M20,58 Q40,50 60,58" stroke="#92400e" stroke-width="2" fill="none" opacity="0.5"/>
+</svg>"""
+
+PAN_WARN = """
+<svg viewBox="0 0 80 90" width="80" height="90" xmlns="http://www.w3.org/2000/svg">
+  <path d="M14,50 Q14,26 40,24 Q66,26 66,50 L66,66 Q66,76 56,76 L24,76 Q14,76 14,66 Z" fill="#c2793f"/>
+  <path d="M28,32 L32,44 M48,30 L44,42 M40,26 L40,38" stroke="#78350f" stroke-width="1.5" opacity="0.6"/>
+</svg>"""
+
+PAN_DANGER = """
+<svg viewBox="0 0 80 90" width="80" height="90" xmlns="http://www.w3.org/2000/svg">
+  <path d="M14,50 Q14,26 40,24 Q66,26 66,50 L66,66 Q66,76 56,76 L24,76 Q14,76 14,66 Z" fill="#d97706"/>
+  <circle cx="28" cy="40" r="6" fill="#166534" opacity="0.75"/>
+  <circle cx="46" cy="34" r="5" fill="#052e16" opacity="0.7"/>
+  <circle cx="38" cy="56" r="5" fill="#166534" opacity="0.7"/>
+  <circle cx="54" cy="58" r="4" fill="#052e16" opacity="0.6"/>
+</svg>"""
+
+
 # ─── FUNCIÓN PRINCIPAL ──────────────────────────────────────────────────────
 
 def get_ilustraciones(tipo_empaque):
@@ -210,6 +314,26 @@ def get_ilustraciones(tipo_empaque):
             (EMPAQUE_OK,      "ok",     "Intacto",           "Sin daños visibles"),
             (EMPAQUE_WARN,    "warn",   "Revisar",           "Algún daño menor"),
             (EMPAQUE_DANGER,  "danger", "No consumir",       "Dañado o contaminado"),
+        ),
+        "fruta_verdura": (
+            (FRUTA_OK,      "ok",     "Fresca",            "Sin manchas ni golpes"),
+            (FRUTA_WARN,    "warn",   "Revisar",           "Magulladura o mancha oscura"),
+            (FRUTA_DANGER,  "danger", "No consumir",       "Moho o muy blanda/arrugada"),
+        ),
+        "lacteos": (
+            (LACTEOS_OK,      "ok",     "En buen estado",   "Textura y color normales"),
+            (LACTEOS_WARN,    "warn",   "Revisar",           "Grumos o separación"),
+            (LACTEOS_DANGER,  "danger", "No consumir",       "Envase hinchado o con moho"),
+        ),
+        "carne_pescado": (
+            (CARNE_OK,      "ok",     "Fresca",            "Color rosado/rojo normal"),
+            (CARNE_WARN,    "warn",   "Revisar",           "Zona decolorada o gris"),
+            (CARNE_DANGER,  "danger", "No consumir",       "Gris-verdosa con manchas oscuras"),
+        ),
+        "panaderia_fresca": (
+            (PAN_OK,      "ok",     "Fresco",            "Sin manchas ni olor raro"),
+            (PAN_WARN,    "warn",   "Revisar",           "Duro o seco, sin moho"),
+            (PAN_DANGER,  "danger", "No consumir",       "Manchas de moho (verde o negro)"),
         ),
     }
 
