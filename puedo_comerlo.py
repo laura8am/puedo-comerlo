@@ -378,6 +378,9 @@ DAÑOS_A_PALABRAS_CLAVE = {
     "insectos": ["insectos", "gusanos", "infestación"],
     "sello_roto": ["sello"],
     "tapa_abombada": ["tapa", "abombada"],
+    "agrio": ["agrio", "amoniaco", "alcohol"],
+    "decolorado": ["color", "gris", "verdoso", "oscuras", "oscuro"],
+    "textura_pegajosa": ["pegajosa", "babosa", "grumos", "textura"],
 }
 
 
@@ -561,25 +564,25 @@ if foto_empaque is not None:
             producto_detectado = d.get("producto")
             daños_ia = d.get("daños", [])
             confianza = d.get("confianza", "media")
+            tipo_detectado = d.get("tipo_empaque")
+
+            aviso_categoria = ""
+            if tipo_detectado and tipo_detectado != tipo_empaque:
+                if tipo_detectado in CATEGORIAS_PERECEDERAS and tipo_empaque not in CATEGORIAS_PERECEDERAS:
+                    aviso_categoria = '<br><span style="color:#9A3412;">💡 Parece perecedero — cambia a "🥛 Perecedero" en el Paso 1 para preguntas más precisas.</span>'
+                elif tipo_detectado not in CATEGORIAS_PERECEDERAS and tipo_empaque in CATEGORIAS_PERECEDERAS:
+                    aviso_categoria = '<br><span style="color:#9A3412;">💡 Parece no perecedero — cambia a "📦 No perecedero" en el Paso 1 para preguntas más precisas.</span>'
+
             with col_ref:
-                if d.get("tipo_empaque") == "perecedero":
-                    st.markdown(f"""
-                    <div style="background:#FFF7ED; border-radius:10px; padding:12px; font-size:0.82rem; color:#9A3412; height:100%;">
-                        <span class="ia-tag">IA</span><br>
-                        <b>{producto_detectado or 'Alimento perecedero'}</b><br>
-                        ⚠️ Esta app todavía no evalúa perecederos (carnes, lácteos, frutas, verduras, panadería fresca). Está pensada para alimentos no perecederos con empaque sellado.
-                    </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    st.markdown(f"""
-                    <div style="background:#F0FDF4; border-radius:10px; padding:12px; font-size:0.82rem; color:#065F46; height:100%;">
-                        <span class="ia-tag">IA</span><br>
-                        <b>{producto_detectado or 'No identificado'}</b><br>
-                        {"📅 " + fecha_detectada if fecha_detectada else "📅 Fecha no visible"}<br>
-                        {"⚠️ " + ", ".join(daños_ia) if daños_ia else "✅ Sin daños visibles"}<br>
-                        <span style="color:#6B7B6A;font-size:0.75rem;">Confianza: {confianza}</span>
-                    </div>
-                    """, unsafe_allow_html=True)
+                st.markdown(f"""
+                <div style="background:#F0FDF4; border-radius:10px; padding:12px; font-size:0.82rem; color:#065F46; height:100%;">
+                    <span class="ia-tag">IA</span><br>
+                    <b>{producto_detectado or 'No identificado'}</b><br>
+                    {"📅 " + fecha_detectada if fecha_detectada else "📅 Fecha no visible"}<br>
+                    {"⚠️ " + ", ".join(daños_ia) if daños_ia else "✅ Sin daños visibles"}<br>
+                    <span style="color:#6B7B6A;font-size:0.75rem;">Confianza: {confianza}</span>{aviso_categoria}
+                </div>
+                """, unsafe_allow_html=True)
     else:
         with col_ref:
             st.markdown("""
