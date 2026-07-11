@@ -12,26 +12,33 @@ from PIL import Image
 
 def analizar_empaque(imagen_bytes, api_key):
     """
-    Analiza una imagen de empaque no perecedero usando OpenAI Vision.
+    Analiza una imagen de un alimento (perecedero o no) usando OpenAI Vision.
     Devuelve dict con producto, fecha, tipo_fecha, daños, confianza, mensaje.
     """
     client = OpenAI(api_key=api_key)
 
     imagen_b64 = base64.b64encode(imagen_bytes).decode("utf-8")
 
-    prompt = """Eres un experto en seguridad alimentaria. Analiza esta imagen de un empaque de alimento NO PERECEDERO (lata, pasta, arroz, harina, aceite, salsa, cereal, galletas, conserva, etc.).
+    prompt = """Eres un experto en seguridad alimentaria. Analiza esta imagen de un alimento, sea no perecedero (con empaque sellado de fábrica) o perecedero (fresco, refrigerado, sin empaque sellado).
 
 Responde ÚNICAMENTE con un JSON válido, sin texto adicional:
 
 {
   "producto": "nombre del producto que ves",
-  "tipo_empaque": "uno de: lata, empaque_seco, empaque_flexible, botella, frasco, caja, general",
+  "tipo_empaque": "uno de: lata, empaque_seco, empaque_flexible, botella, frasco, caja, general, lacteos, carne_pescado, fruta_verdura, panaderia_fresca",
   "fecha": "fecha en formato YYYY-MM-DD o null si no se ve",
   "tipo_fecha": "caducidad o consumo_preferente o null",
-  "daños": ["lista de daños visibles: inflada, abombada, oxido, golpe_costura, golpe_cuerpo, roto, perforado, humedad, manchas, moho, insectos, sello_roto, tapa_abombada"],
+  "daños": ["lista de daños visibles: inflada, abombada, oxido, golpe_costura, golpe_cuerpo, roto, perforado, humedad, manchas, moho, insectos, sello_roto, tapa_abombada, agrio, decolorado, textura_pegajosa"],
   "confianza": "alta, media o baja",
   "mensaje": "frase corta en español de máximo 15 palabras"
-}"""
+}
+
+Guía para "tipo_empaque" en perecederos:
+- "lacteos": leche, yogurt, queso, crema.
+- "carne_pescado": carne, pollo, pescado o mariscos crudos o cocidos.
+- "fruta_verdura": fruta o verdura fresca.
+- "panaderia_fresca": pan o repostería fresca sin conservadores.
+Si es un no perecedero, usa la categoría de empaque que corresponda (lata, empaque_seco, empaque_flexible, botella, frasco, caja) o "general" si no encaja en ninguna."""
 
     try:
         respuesta = client.chat.completions.create(
@@ -62,7 +69,11 @@ Responde ÚNICAMENTE con un JSON válido, sin texto adicional:
             if campo not in resultado:
                 resultado[campo] = None
 
-        if resultado.get("tipo_empaque") not in ["lata", "empaque_seco", "empaque_flexible", "botella", "frasco", "caja", "general"]:
+        TIPOS_VALIDOS = [
+            "lata", "empaque_seco", "empaque_flexible", "botella", "frasco", "caja", "general",
+            "lacteos", "carne_pescado", "fruta_verdura", "panaderia_fresca",
+        ]
+        if resultado.get("tipo_empaque") not in TIPOS_VALIDOS:
             resultado["tipo_empaque"] = "general"
 
         if not isinstance(resultado.get("daños"), list):

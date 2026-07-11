@@ -228,7 +228,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ─── Datos del producto ────────────────────────────────────────────────────
-PRODUCTOS = {
+PRODUCTOS_NO_PERECEDEROS = {
     "🥫  Lata (atún, frijoles, vegetales, chiles...)": "lata",
     "🍝  Pasta (spaghetti, macarrón, codito...)": "empaque_seco",
     "🌾  Arroz": "empaque_seco",
@@ -243,6 +243,16 @@ PRODUCTOS = {
     "🥫  Conserva en frasco (mermelada, miel, salsa...)": "frasco",
     "📦  Otro no perecedero": "general",
 }
+
+PRODUCTOS_PERECEDEROS = {
+    "🥛  Lácteos (leche, yogurt, queso, crema)": "lacteos",
+    "🍗  Carne, pollo o pescado": "carne_pescado",
+    "🍎  Fruta o verdura fresca": "fruta_verdura",
+    "🍞  Pan o panadería fresca": "panaderia_fresca",
+}
+
+PRODUCTOS = {**PRODUCTOS_NO_PERECEDEROS, **PRODUCTOS_PERECEDEROS}
+CATEGORIAS_PERECEDERAS = set(PRODUCTOS_PERECEDEROS.values())
 
 PREGUNTAS_EMPAQUE = {
     "lata": [
@@ -311,7 +321,91 @@ PREGUNTAS_EMPAQUE = {
         ("¿El producto huele diferente al normal?", "warning",
          "Un olor inusual siempre es señal de revisar."),
     ],
+    "lacteos": [
+        ("¿Hay grumos o separación anormal en la textura?", "danger",
+         "Indica que el lácteo se cortó o fermentó de forma no controlada."),
+        ("¿Ves moho (manchas verdes, negras o blancas afelpadas)?", "danger",
+         "El moho en lácteos puede producir toxinas peligrosas."),
+        ("¿Huele agrio, rancio o diferente al abrirlo?", "danger",
+         "Un olor agrio fuera de lo normal indica descomposición."),
+        ("¿El empaque está hinchado o el sello roto?", "warning",
+         "Puede indicar fermentación por bacterias."),
+    ],
+    "carne_pescado": [
+        ("¿Tiene un olor fuerte, agrio o a amoniaco?", "danger",
+         "Señal clara de descomposición bacteriana."),
+        ("¿El color cambió a gris, verdoso o muy oscuro?", "danger",
+         "Los cambios de color indican deterioro avanzado."),
+        ("¿La textura está pegajosa o babosa?", "danger",
+         "Indica crecimiento bacteriano en la superficie."),
+        ("¿Lleva más de 1-2 días refrigerado sin cocinar ni congelar?", "warning",
+         "La carne y el pescado crudos se deben cocinar o congelar pronto."),
+    ],
+    "fruta_verdura": [
+        ("¿Hay moho visible?", "danger",
+         "El moho puede haberse extendido más allá de lo visible."),
+        ("¿Está muy blanda, líquida o con mal olor?", "danger",
+         "Señal de descomposición avanzada."),
+        ("¿Tiene manchas oscuras grandes o magulladuras profundas?", "warning",
+         "A veces se puede cortar la parte dañada si el resto se ve y huele bien."),
+        ("¿Ha pasado ya bastante tiempo desde que la compraste?", "warning",
+         "Cada fruta o verdura tiene su propio tiempo de vida útil."),
+    ],
+    "panaderia_fresca": [
+        ("¿Hay moho visible (manchas verdes, blancas o negras)?", "danger",
+         "El moho en pan se extiende más allá de lo visible; no cortes y comas el resto."),
+        ("¿Huele a alcohol, agrio o raro?", "danger",
+         "Indica fermentación no deseada."),
+        ("¿Está duro, seco o con textura rara pero sin moho ni mal olor?", "warning",
+         "Suele ser solo pérdida de calidad, no necesariamente peligroso."),
+    ],
 }
+
+# Palabras clave para relacionar cada etiqueta de daño que devuelve la IA con
+# las preguntas de Paso 3, y así poder marcar automáticamente las casillas que
+# correspondan a lo que la IA detectó en la foto.
+DAÑOS_A_PALABRAS_CLAVE = {
+    "inflada": ["inflada", "abombada"],
+    "abombada": ["abombada", "inflada"],
+    "oxido": ["óxido"],
+    "golpe_costura": ["costura"],
+    "golpe_cuerpo": ["golpe"],
+    "roto": ["rota", "roto", "rasgad"],
+    "perforado": ["perforad"],
+    "humedad": ["húmeda", "humedad", "mojada"],
+    "manchas": ["manchas"],
+    "moho": ["moho"],
+    "insectos": ["insectos", "gusanos", "infestación"],
+    "sello_roto": ["sello"],
+    "tapa_abombada": ["tapa", "abombada"],
+    "agrio": ["agrio", "amoniaco", "alcohol"],
+    "decolorado": ["color", "gris", "verdoso", "oscuras", "oscuro"],
+    "textura_pegajosa": ["pegajosa", "babosa", "grumos", "textura"],
+}
+
+
+def _valor_o_none(valor):
+    """La IA a veces devuelve el texto 'null' en vez de un valor vacío real."""
+    if isinstance(valor, str) and valor.strip().lower() in ("null", "none", ""):
+        return None
+    return valor
+
+
+def _preguntas_a_marcar(tipo_empaque, daños_detectados):
+    """Índices de las preguntas de Paso 3 que coinciden con los daños que la IA vio en la foto."""
+    preguntas_tipo = PREGUNTAS_EMPAQUE.get(tipo_empaque, PREGUNTAS_EMPAQUE["general"])
+    idxs = set()
+    for daño in daños_detectados:
+        tag = str(_valor_o_none(daño) or "").strip().lower()
+        if not tag:
+            continue
+        palabras_clave = DAÑOS_A_PALABRAS_CLAVE.get(tag, [tag])
+        for idx, (pregunta, _, _) in enumerate(preguntas_tipo):
+            pregunta_norm = pregunta.lower()
+            if any(kw in pregunta_norm for kw in palabras_clave):
+                idxs.add(idx)
+    return idxs
+
 
 TIPS_POR_PRODUCTO = {
     "lata": "💡 Las latas sin daño duran mucho más allá de la fecha de consumo preferente. Una lata de 2019 en buen estado puede seguir siendo segura.",
@@ -321,18 +415,30 @@ TIPS_POR_PRODUCTO = {
     "caja": "💡 Los cereales abiertos, guardados en bolsa hermética, duran semanas más allá de la fecha.",
     "empaque_flexible": "💡 Las galletas 'pasadas' de fecha a menudo solo pierden textura (están blandas), no son peligrosas si el empaque estaba cerrado.",
     "general": "💡 La mayoría de los no perecederos siguen siendo seguros después de la fecha si el empaque está en buen estado.",
+    "lacteos": "💡 Los lácteos deben mantenerse refrigerados siempre. Si hay duda sobre el olor o la textura, mejor no arriesgarse.",
+    "carne_pescado": "💡 La carne y el pescado crudos son de los alimentos más riesgosos. Cocina bien y evita dejarlos a temperatura ambiente.",
+    "fruta_verdura": "💡 Muchas frutas y verduras se pueden recuperar cortando la parte dañada, si el resto se ve y huele bien.",
+    "panaderia_fresca": "💡 El pan fresco sin conservadores dura pocos días a temperatura ambiente. Congélalo si no lo vas a comer pronto.",
 }
 
 # ─── PASO 1: Producto ──────────────────────────────────────────────────────
 st.markdown('<div class="step-label">Paso 1 · ¿Qué tienes?</div>', unsafe_allow_html=True)
 
 with st.container():
-    producto_seleccionado = st.selectbox(
-        "Elige el tipo de alimento",
-        options=list(PRODUCTOS.keys()),
+    OPCIONES_CATEGORIA = ["📦 No perecedero", "🥛 Perecedero"]
+    categoria_producto = st.radio(
+        "Categoría",
+        OPCIONES_CATEGORIA,
+        horizontal=True,
         label_visibility="collapsed"
     )
-    tipo_empaque = PRODUCTOS[producto_seleccionado]
+    opciones_producto = PRODUCTOS_PERECEDEROS if categoria_producto == OPCIONES_CATEGORIA[1] else PRODUCTOS_NO_PERECEDEROS
+    producto_seleccionado = st.selectbox(
+        "Elige el tipo de alimento",
+        options=list(opciones_producto.keys()),
+        label_visibility="collapsed"
+    )
+    tipo_empaque = opciones_producto[producto_seleccionado]
 
 st.markdown("")
 
@@ -436,7 +542,17 @@ if foto_empaque is not None:
                 with st.spinner("Analizando..."):
                     ia_resultado = analizar_empaque(img_bytes, ia_key)
             if ia_resultado and ia_resultado.get("exito"):
-                st.session_state.ia_datos = ia_resultado["datos"]
+                datos = ia_resultado["datos"]
+                datos["producto"] = _valor_o_none(datos.get("producto"))
+                datos["fecha"] = _valor_o_none(datos.get("fecha"))
+                datos["tipo_fecha"] = _valor_o_none(datos.get("tipo_fecha"))
+                daños_detectados = [d for d in (datos.get("daños") or []) if _valor_o_none(d)]
+                datos["daños"] = daños_detectados
+
+                for idx in _preguntas_a_marcar(tipo_empaque, daños_detectados):
+                    st.session_state[f"chk_{tipo_empaque}_{idx}"] = True
+
+                st.session_state.ia_datos = datos
                 st.session_state.ia_foto_id = foto_id
                 st.rerun()
             else:
@@ -448,6 +564,15 @@ if foto_empaque is not None:
             producto_detectado = d.get("producto")
             daños_ia = d.get("daños", [])
             confianza = d.get("confianza", "media")
+            tipo_detectado = d.get("tipo_empaque")
+
+            aviso_categoria = ""
+            if tipo_detectado and tipo_detectado != tipo_empaque:
+                if tipo_detectado in CATEGORIAS_PERECEDERAS and tipo_empaque not in CATEGORIAS_PERECEDERAS:
+                    aviso_categoria = '<br><span style="color:#9A3412;">💡 Parece perecedero — cambia a "🥛 Perecedero" en el Paso 1 para preguntas más precisas.</span>'
+                elif tipo_detectado not in CATEGORIAS_PERECEDERAS and tipo_empaque in CATEGORIAS_PERECEDERAS:
+                    aviso_categoria = '<br><span style="color:#9A3412;">💡 Parece no perecedero — cambia a "📦 No perecedero" en el Paso 1 para preguntas más precisas.</span>'
+
             with col_ref:
                 st.markdown(f"""
                 <div style="background:#F0FDF4; border-radius:10px; padding:12px; font-size:0.82rem; color:#065F46; height:100%;">
@@ -455,7 +580,7 @@ if foto_empaque is not None:
                     <b>{producto_detectado or 'No identificado'}</b><br>
                     {"📅 " + fecha_detectada if fecha_detectada else "📅 Fecha no visible"}<br>
                     {"⚠️ " + ", ".join(daños_ia) if daños_ia else "✅ Sin daños visibles"}<br>
-                    <span style="color:#6B7B6A;font-size:0.75rem;">Confianza: {confianza}</span>
+                    <span style="color:#6B7B6A;font-size:0.75rem;">Confianza: {confianza}</span>{aviso_categoria}
                 </div>
                 """, unsafe_allow_html=True)
     else:
@@ -508,7 +633,14 @@ if st.button("🔍 Ver resultado", use_container_width=True, type="primary"):
     problemas = [(exp, p) for r, nivel, exp, p in respuestas if r]
 
     # Lógica de decisión
+    # Los perecederos no tienen el mismo margen de gracia que los no perecederos:
+    # una fecha de caducidad vencida es motivo de alerta de inmediato, sin días
+    # de tolerancia, y "consumo preferente" vencido también pesa mucho más pronto.
+    es_perecedero_actual = tipo_empaque in CATEGORIAS_PERECEDERAS
+
     if hay_danger:
+        decision = "danger"
+    elif es_perecedero_actual and es_caducidad and dias_diferencia < 0:
         decision = "danger"
     elif hay_warning and es_caducidad and dias_diferencia < -30:
         decision = "danger"
@@ -518,7 +650,9 @@ if st.button("🔍 Ver resultado", use_container_width=True, type="primary"):
         decision = "caution"
     elif es_caducidad and dias_diferencia < 0:
         decision = "caution"
-    elif not es_caducidad and dias_diferencia < -365:
+    elif es_perecedero_actual and not es_caducidad and dias_diferencia < -3:
+        decision = "caution"
+    elif not es_perecedero_actual and not es_caducidad and dias_diferencia < -365:
         decision = "caution"
     else:
         decision = "safe"
