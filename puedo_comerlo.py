@@ -1,5 +1,6 @@
 import streamlit as st
-from datetime import date
+from datetime import date, timedelta
+from ilustraciones import get_ilustraciones
 
 try:
     from vision_ia import analizar_empaque
@@ -9,207 +10,223 @@ except ImportError:
     def analizar_empaque(img, key):
         return {"exito": False, "error": "Módulo IA no disponible."}
 
+# ─── Configuración de página ───────────────────────────────────────────────
 st.set_page_config(
-    page_title="¿Puedo comerlo?",
+    page_title="¿Puedo comerlo? | Disco Sopa Pitic",
     page_icon="🥫",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
 
+# ─── Estilos CSS ───────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Serif+Display&display=swap');
 
-*, html, body, [class*="css"] {
-    font-family: 'Inter', sans-serif !important;
-    background-color: #FFFFFF !important;
-    color: #000000 !important;
-}
+    html, body, [class*="css"] {
+        font-family: 'DM Sans', sans-serif;
+        background-color: #F5E6C8;
+    }
 
-.stApp {
-    background-color: #FFFFFF !important;
-}
+    .stApp {
+        background-color: #F5E6C8;
+    }
 
-section[data-testid="stSidebar"] {
-    display: none;
-}
+    h1, h2, h3 {
+        font-family: 'DM Serif Display', serif;
+        color: #1B4332;
+    }
 
-.block-container {
-    padding-top: 2rem;
-    padding-bottom: 3rem;
-    max-width: 640px;
-}
+    .header-block {
+        background-color: #1B4332;
+        border-radius: 16px;
+        padding: 24px 28px 20px 28px;
+        margin-bottom: 28px;
+        text-align: center;
+    }
 
-h1, h2, h3 { color: #000000; }
+    .header-title {
+        color: #F5E6C8;
+        font-family: 'DM Serif Display', serif;
+        font-size: 2.2rem;
+        margin: 0;
+        line-height: 1.2;
+    }
 
-/* Header */
-.header {
-    border-bottom: 2px solid #000;
-    padding-bottom: 20px;
-    margin-bottom: 40px;
-}
-.header-eyebrow {
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: #666;
-    margin-bottom: 6px;
-}
-.header-title {
-    font-size: 2.6rem;
-    font-weight: 900;
-    color: #000;
-    line-height: 1;
-    margin: 0;
-}
+    .header-sub {
+        color: #A3C4A0;
+        font-size: 0.95rem;
+        margin-top: 6px;
+    }
 
-/* Step label */
-.step {
-    font-size: 0.65rem;
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: #999;
-    margin-bottom: 8px;
-    margin-top: 32px;
-}
+    .step-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        color: #6B7B6A;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+    }
 
-/* Upload zone */
-.upload-zone {
-    border: 1.5px solid #000;
-    padding: 28px 20px;
-    text-align: center;
-    margin-bottom: 16px;
-    cursor: pointer;
-}
-.upload-icon { font-size: 1.8rem; margin-bottom: 6px; }
-.upload-title { font-weight: 700; font-size: 0.95rem; color: #000; }
-.upload-sub { font-size: 0.78rem; color: #666; margin-top: 4px; }
+    .card {
+        background: #FFFFFF;
+        border-radius: 14px;
+        padding: 20px 22px;
+        margin-bottom: 18px;
+        border: 1px solid #E8D9B8;
+    }
 
-/* IA result tag */
-.ia-tag {
-    display: inline-block;
-    background: #000;
-    color: #fff;
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    padding: 3px 10px;
-    margin-bottom: 8px;
-}
+    .ref-img-container {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+        margin-bottom: 8px;
+    }
 
-/* Fecha diff box */
-.diff-box {
-    border-left: 3px solid #000;
-    padding: 10px 14px;
-    font-size: 0.84rem;
-    color: #333;
-    background: #f8f8f8;
-    margin: 12px 0;
-    line-height: 1.5;
-}
+    .ref-img {
+        flex: 1;
+        min-width: 120px;
+        border-radius: 10px;
+        padding: 14px;
+        text-align: center;
+        font-size: 0.82rem;
+        font-weight: 500;
+    }
 
-/* Ref images placeholder */
-.ref-row {
-    display: flex;
-    gap: 10px;
-    margin: 14px 0;
-}
-.ref-card {
-    flex: 1;
-    border: 1.5px solid #000;
-    padding: 14px 8px;
-    text-align: center;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #000;
-}
-.ref-card-warn { border-color: #000; background: #fffbe6; }
-.ref-card-danger { border-color: #000; background: #fff5f5; }
+    .ref-ok {
+        background: #D1FAE5;
+        border: 2px solid #34D399;
+        color: #065F46;
+    }
 
-/* Results */
-.result-box {
-    padding: 28px 24px;
-    margin-top: 20px;
-    border: 2px solid #000;
-}
-.result-safe { border-color: #000; background: #f0fff4; }
-.result-caution { border-color: #000; background: #fffbe6; }
-.result-danger { border-color: #000; background: #fff5f5; }
+    .ref-warn {
+        background: #FEF3C7;
+        border: 2px solid #F59E0B;
+        color: #92400E;
+    }
 
-.result-verdict {
-    font-size: 2rem;
-    font-weight: 900;
-    color: #000;
-    line-height: 1;
-    margin-bottom: 10px;
-    text-transform: uppercase;
-}
-.result-body {
-    font-size: 0.88rem;
-    color: #333;
-    line-height: 1.6;
-    margin-bottom: 12px;
-}
-.result-tip {
-    font-size: 0.8rem;
-    color: #555;
-    border-top: 1px solid #ddd;
-    padding-top: 10px;
-    margin-top: 10px;
-}
+    .ref-danger {
+        background: #FEE2E2;
+        border: 2px solid #F87171;
+        color: #991B1B;
+    }
 
-/* Divider */
-.divider {
-    border: none;
-    border-top: 1px solid #e5e5e5;
-    margin: 8px 0 16px 0;
-}
+    .result-safe {
+        background: linear-gradient(135deg, #D1FAE5, #A7F3D0);
+        border: 2px solid #34D399;
+        border-radius: 16px;
+        padding: 28px 24px;
+        text-align: center;
+    }
 
-/* Button override */
-.stButton > button {
-    background: #000 !important;
-    color: #fff !important;
-    border: none !important;
-    border-radius: 0 !important;
-    font-weight: 700 !important;
-    font-size: 0.85rem !important;
-    letter-spacing: 0.08em !important;
-    text-transform: uppercase !important;
-    padding: 14px 24px !important;
-    width: 100% !important;
-}
-.stButton > button:hover {
-    background: #222 !important;
-}
+    .result-caution {
+        background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+        border: 2px solid #F59E0B;
+        border-radius: 16px;
+        padding: 28px 24px;
+        text-align: center;
+    }
 
-/* Radio y selectbox */
-div[data-testid="stRadio"] label { font-size: 0.9rem !important; color: #000 !important; }
-div[data-testid="stCheckbox"] label { font-size: 0.88rem !important; color: #111 !important; }
+    .result-danger {
+        background: linear-gradient(135deg, #FEE2E2, #FECACA);
+        border: 2px solid #F87171;
+        border-radius: 16px;
+        padding: 28px 24px;
+        text-align: center;
+    }
 
-/* Footer */
-.footer {
-    border-top: 1px solid #e5e5e5;
-    padding-top: 16px;
-    margin-top: 40px;
-    font-size: 0.72rem;
-    color: #aaa;
-    text-align: center;
-    letter-spacing: 0.05em;
-}
+    .result-emoji {
+        font-size: 3.5rem;
+        margin-bottom: 8px;
+    }
+
+    .result-title {
+        font-family: 'DM Serif Display', serif;
+        font-size: 1.8rem;
+        margin: 0 0 10px 0;
+        color: #1B4332;
+    }
+
+    .result-reason {
+        font-size: 0.95rem;
+        color: #374151;
+        margin-bottom: 12px;
+        line-height: 1.6;
+    }
+
+    .tip-box {
+        background: rgba(255,255,255,0.6);
+        border-radius: 10px;
+        padding: 12px 14px;
+        font-size: 0.88rem;
+        color: #374151;
+        text-align: left;
+        margin-top: 10px;
+    }
+
+    .diff-box {
+        background: #EEF9EE;
+        border-left: 4px solid #1B4332;
+        border-radius: 0 10px 10px 0;
+        padding: 12px 14px;
+        font-size: 0.88rem;
+        color: #1B4332;
+        margin-top: 10px;
+        margin-bottom: 6px;
+    }
+
+    .days-tag {
+        display: inline-block;
+        background: #1B4332;
+        color: #F5E6C8;
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-top: 6px;
+    }
+
+    .footer-note {
+        text-align: center;
+        font-size: 0.78rem;
+        color: #9CA3AF;
+        margin-top: 32px;
+        padding-bottom: 20px;
+    }
+
+    .ia-tag {
+        display: inline-block;
+        background: #1B4332;
+        color: #F5E6C8;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        border-radius: 20px;
+        padding: 3px 10px;
+        margin-bottom: 8px;
+    }
+
+    div[data-testid="stCheckbox"] label {
+        font-size: 0.92rem !important;
+        color: #374151 !important;
+    }
+
+    div[data-testid="stSelectbox"] > div {
+        border-radius: 10px !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# ── HEADER ────────────────────────────────────────────────────────────────
+# ─── Header ────────────────────────────────────────────────────────────────
 st.markdown("""
-<div class="header">
-    <div class="header-eyebrow">Disco Sopa Pitic · Hermosillo, Sonora</div>
-    <div class="header-title">¿Puedo<br>comerlo?</div>
+<div class="header-block">
+    <div class="header-title">🥫 ¿Puedo comerlo?</div>
+    <div class="header-sub">Descubre si tu alimento todavía es seguro · Disco Sopa Pitic</div>
 </div>
 """, unsafe_allow_html=True)
 
-# ── DATOS ─────────────────────────────────────────────────────────────────
+# ─── Datos del producto ────────────────────────────────────────────────────
 PRODUCTOS = {
     "🥫  Lata (atún, frijoles, vegetales, chiles...)": "lata",
     "🍝  Pasta (spaghetti, macarrón, codito...)": "empaque_seco",
@@ -222,91 +239,124 @@ PRODUCTOS = {
     "🍪  Galletas o pan de caja": "empaque_flexible",
     "☕  Café, té o cacao": "empaque_flexible",
     "🧂  Azúcar, sal o especias": "empaque_seco",
-    "🫙  Conserva en frasco (mermelada, miel, salsa...)": "frasco",
+    "🥫  Conserva en frasco (mermelada, miel, salsa...)": "frasco",
     "📦  Otro no perecedero": "general",
 }
 
-PREGUNTAS = {
+PREGUNTAS_EMPAQUE = {
     "lata": [
-        ("¿Está abombada o inflada?", "danger", "Señal de bacterias peligrosas (botulismo)."),
-        ("¿Tiene óxido con perforaciones?", "danger", "El sellado está comprometido."),
-        ("¿Golpe fuerte en las costuras (bordes)?", "warning", "Puede romper el sellado hermético."),
-        ("¿Huele extraño al abrirla?", "danger", "Olor diferente indica deterioro."),
+        ("¿La lata está abombada o inflada?", "danger",
+         "Señal de bacterias peligrosas (botulismo). No abras ni huelas."),
+        ("¿Tiene óxido con agujeros o perforaciones?", "danger",
+         "El sellado está comprometido. El contenido puede estar contaminado."),
+        ("¿Tiene un golpe fuerte en las costuras (bordes)?", "warning",
+         "Los golpes en las costuras pueden romper el sellado hermético."),
+        ("¿Huele extraño o a metal al abrirla?", "danger",
+         "Un olor diferente al normal indica deterioro o contaminación."),
     ],
     "empaque_seco": [
-        ("¿El empaque está roto o perforado?", "danger", "Expone el producto a humedad e insectos."),
-        ("¿Hay humedad, manchas oscuras o moho?", "danger", "Genera toxinas peligrosas (aflatoxinas)."),
-        ("¿Ves insectos o huellas de infestación?", "danger", "El producto está contaminado."),
-        ("¿Huele rancio o diferente?", "warning", "Las grasas de harinas y cereales se oxidan."),
-    ],
-    "empaque_flexible": [
-        ("¿El empaque está perforado o roto?", "danger", "Producto expuesto a humedad e insectos."),
-        ("¿Hay humedad o el producto está pegajoso?", "warning", "Puede generar moho."),
-        ("¿Huele rancio o diferente?", "warning", "Las grasas de galletas se oxidan con el tiempo."),
+        ("¿El empaque está roto, rasgado o perforado?", "danger",
+         "Un empaque abierto expone el producto a humedad e insectos."),
+        ("¿Hay señales de humedad, manchas oscuras o moho?", "danger",
+         "La humedad en granos y harinas genera toxinas peligrosas (aflatoxinas)."),
+        ("¿Ves insectos, gusanos o sus huellas?", "danger",
+         "Indica infestación. El producto no es seguro."),
+        ("¿El producto huele rancio o diferente?", "warning",
+         "Las grasas de harinas y cereales se oxidan. Puede no ser dañino pero la calidad cayó."),
     ],
     "botella": [
-        ("¿La tapa está rota u oxidada?", "danger", "Sellado comprometido."),
-        ("¿El sello de seguridad está roto?", "danger", "Producto fue abierto o manipulado."),
-        ("¿El líquido tiene color u olor diferente?", "warning", "Puede indicar deterioro."),
-        ("¿Hay sedimento inusual o turbidez?", "warning", "Depende del producto, revisa."),
+        ("¿La tapa está rota, oxidada o dañada?", "danger",
+         "El sellado está comprometido."),
+        ("¿El sello de seguridad (plastilina o botón) está roto o levantado?", "danger",
+         "Indica que el producto fue abierto o manipulado."),
+        ("¿El líquido tiene color, olor o textura diferente al normal?", "warning",
+         "Puede indicar deterioro o contaminación."),
+        ("¿Hay sedimento inusual o el líquido está turbio cuando no debería?", "warning",
+         "Depende del producto: en algunos es normal (vinagre, salsas naturales), en otros no."),
     ],
     "frasco": [
-        ("¿La tapa está abombada?", "danger", "Señal de fermentación o bacterias."),
-        ("¿Hay moho visible?", "danger", "En conservas, el moho penetra todo."),
-        ("¿El botón de la tapa está levantado?", "danger", "El vacío se rompió."),
-        ("¿Huele agrio o diferente?", "warning", "Puede ser fermentación o deterioro."),
+        ("¿La tapa está abombada o hace un ruido diferente al abrirla?", "danger",
+         "Señal de fermentación o bacterias. No la consumas."),
+        ("¿Hay moho visible en la superficie o el interior?", "danger",
+         "En conservas, el moho puede penetrar el producto completo."),
+        ("¿El sello de vacío (el botón de la tapa) está levantado?", "danger",
+         "Indica que el vacío se rompió y puede estar contaminado."),
+        ("¿El producto huele agrio o diferente al normal?", "warning",
+         "Puede ser fermentación natural (en algunos productos) o deterioro."),
     ],
     "caja": [
-        ("¿La caja está muy húmeda?", "warning", "Afecta el contenido interno."),
-        ("¿La bolsa interior está abierta o rota?", "danger", "Expuesto a humedad e insectos."),
-        ("¿Hay insectos o señales de infestación?", "danger", "Producto contaminado."),
-        ("¿Huele rancio?", "warning", "Cereales con grasa se oxidan."),
+        ("¿La caja está muy húmeda o mojada?", "warning",
+         "La humedad puede afectar el cereal interno."),
+        ("¿La bolsa interior está rota o abierta?", "danger",
+         "El producto quedó expuesto a humedad e insectos."),
+        ("¿Hay insectos o señales de infestación?", "danger",
+         "Indica contaminación del producto."),
+        ("¿El producto tiene un olor extraño o rancio?", "warning",
+         "Los cereales con grasa (avena, granola) pueden oxidarse."),
+    ],
+    "empaque_flexible": [
+        ("¿El empaque está perforado o roto?", "danger",
+         "El producto quedó expuesto a humedad e insectos."),
+        ("¿Hay señales de humedad o el producto está pegajoso?", "warning",
+         "La humedad afecta la textura y puede generar moho."),
+        ("¿Huele rancio o diferente al normal?", "warning",
+         "Las galletas y panes de caja con grasa se oxidan con el tiempo."),
     ],
     "general": [
-        ("¿El empaque está roto o muy dañado?", "danger", "Expuesto al ambiente."),
-        ("¿Hay humedad, moho o insectos?", "danger", "Deterioro o contaminación."),
-        ("¿Huele diferente al normal?", "warning", "Señal de alerta."),
+        ("¿El empaque está roto, perforado o muy dañado?", "danger",
+         "El producto quedó expuesto al ambiente."),
+        ("¿Hay señales de humedad, moho o insectos?", "danger",
+         "Indica deterioro o contaminación."),
+        ("¿El producto huele diferente al normal?", "warning",
+         "Un olor inusual siempre es señal de revisar."),
     ],
 }
 
-TIPS = {
-    "lata": "Las latas sin daño duran mucho más allá de la fecha indicada.",
-    "empaque_seco": "Guarda arroz, frijol y pasta en recipientes herméticos de vidrio. Duran años.",
-    "empaque_flexible": "Galletas 'pasadas' solo pierden textura, no son peligrosas si el empaque estaba cerrado.",
-    "botella": "Aceite y vinagre son seguros meses después si el envase está intacto.",
-    "frasco": "Mermelada y miel son seguros por mucho tiempo con frasco bien sellado.",
-    "caja": "Cereales abiertos, en bolsa hermética, duran semanas más.",
-    "general": "La mayoría de los no perecederos son seguros si el empaque está en buen estado.",
+TIPS_POR_PRODUCTO = {
+    "lata": "💡 Las latas sin daño duran mucho más allá de la fecha de consumo preferente. Una lata de 2019 en buen estado puede seguir siendo segura.",
+    "empaque_seco": "💡 Guarda arroz, frijol y pasta en recipientes herméticos de vidrio o plástico duro. Duran años en buen estado.",
+    "botella": "💡 El aceite, vinagre y la mayoría de salsas embotelladas son seguros meses después de la fecha si el envase está intacto.",
+    "frasco": "💡 Las mermeladas y miel son seguros por mucho tiempo si el frasco está bien sellado y sin humedad.",
+    "caja": "💡 Los cereales abiertos, guardados en bolsa hermética, duran semanas más allá de la fecha.",
+    "empaque_flexible": "💡 Las galletas 'pasadas' de fecha a menudo solo pierden textura (están blandas), no son peligrosas si el empaque estaba cerrado.",
+    "general": "💡 La mayoría de los no perecederos siguen siendo seguros después de la fecha si el empaque está en buen estado.",
 }
 
-# ── PASO 1 ────────────────────────────────────────────────────────────────
-st.markdown('<div class="step">Paso 1 · ¿Qué tienes?</div>', unsafe_allow_html=True)
-producto_sel = st.selectbox("Producto", list(PRODUCTOS.keys()), label_visibility="collapsed")
-tipo_empaque = PRODUCTOS[producto_sel]
+# ─── PASO 1: Producto ──────────────────────────────────────────────────────
+st.markdown('<div class="step-label">Paso 1 · ¿Qué tienes?</div>', unsafe_allow_html=True)
 
-# ── Variables IA ──────────────────────────────────────────────────────────
+with st.container():
+    producto_seleccionado = st.selectbox(
+        "Elige el tipo de alimento",
+        options=list(PRODUCTOS.keys()),
+        label_visibility="collapsed"
+    )
+    tipo_empaque = PRODUCTOS[producto_seleccionado]
+
+st.markdown("")
+
+# ─── Variables IA ────────────────────────────────────────────────────────
 # Persistidas en session_state: Streamlit corre todo el script de nuevo en cada
-# interacción, así que lo que la IA detecta en el Paso 3 (más abajo) solo puede
-# rellenar los campos del Paso 2 (más arriba) en el rerun siguiente, no en el
-# mismo. Ver el st.rerun() tras guardar el resultado del análisis.
+# interacción, así que lo que la IA detecta más abajo (al subir la foto) solo
+# puede rellenar los campos de fecha de aquí arriba en el rerun siguiente, no
+# en el mismo. Ver el st.rerun() tras guardar el resultado del análisis.
 if "ia_datos" not in st.session_state:
     st.session_state.ia_datos = {}
 
-ia_resultado = None
-producto_detectado = st.session_state.ia_datos.get("producto")
 fecha_detectada = st.session_state.ia_datos.get("fecha")
 tipo_fecha_detectado = st.session_state.ia_datos.get("tipo_fecha")
 
-# ── PASO 2 ────────────────────────────────────────────────────────────────
-st.markdown('<div class="step">Paso 2 · ¿Qué dice la etiqueta?</div>', unsafe_allow_html=True)
+# ─── PASO 2: Fecha ────────────────────────────────────────────────────────
+st.markdown('<div class="step-label">Paso 2 · ¿Qué dice la etiqueta?</div>', unsafe_allow_html=True)
 
 col1, col2 = st.columns([1, 1])
 with col1:
-    es_caducidad_idx = 1 if tipo_fecha_detectado == "caducidad" else 0
+    opciones_fecha = ["📅 Consumo preferente", "⚠️ Fecha de caducidad"]
+    idx_fecha = 1 if tipo_fecha_detectado == "caducidad" else 0
     tipo_fecha = st.radio(
-        "Tipo",
-        ["Consumo preferente", "Fecha de caducidad"],
-        index=es_caducidad_idx,
+        "Tipo de fecha",
+        opciones_fecha,
+        index=idx_fecha,
         label_visibility="collapsed"
     )
 with col2:
@@ -317,38 +367,62 @@ with col2:
             valor_fecha = datetime.strptime(fecha_detectada, "%Y-%m-%d").date()
         except Exception:
             pass
-    fecha_producto = st.date_input("Fecha", value=valor_fecha, label_visibility="collapsed")
+    fecha_producto = st.date_input(
+        "Fecha en el empaque",
+        value=valor_fecha,
+        label_visibility="collapsed"
+    )
 
+# Explicación de la diferencia
 es_caducidad = "caducidad" in tipo_fecha.lower()
 hoy = date.today()
-dias = (fecha_producto - hoy).days
+dias_diferencia = (fecha_producto - hoy).days
 
 if not es_caducidad:
-    st.markdown('<div class="diff-box"><b>Consumo preferente</b> — el fabricante garantiza calidad hasta esa fecha. Después puede seguir siendo <b>seguro</b>, aunque cambie en sabor o textura.</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="diff-box">
+        <b>Consumo preferente</b> = el fabricante garantiza la mejor calidad hasta esa fecha.<br>
+        Después de ella, el alimento puede seguir siendo <b>seguro</b>, aunque puede cambiar en sabor o textura.
+    </div>
+    """, unsafe_allow_html=True)
 else:
-    st.markdown('<div class="diff-box"><b>Fecha de caducidad</b> — después de esta fecha el alimento puede no ser seguro. A diferencia del consumo preferente, aquí sí importa no pasarla.</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="diff-box" style="border-color: #F97316; background: #FFF7ED;">
+        <b>Fecha de caducidad</b> = el alimento puede no ser seguro después de esta fecha.<br>
+        A diferencia del consumo preferente, aquí sí importa mucho no pasarla.
+    </div>
+    """, unsafe_allow_html=True)
 
-# ── PASO 3 ────────────────────────────────────────────────────────────────
-st.markdown('<div class="step">Paso 3 · ¿Cómo está el empaque?</div>', unsafe_allow_html=True)
+st.markdown("")
 
+# ─── PASO 3: Estado del empaque ───────────────────────────────────────────
+st.markdown('<div class="step-label">Paso 3 · ¿Cómo está el empaque?</div>', unsafe_allow_html=True)
+
+# ─── Subida de foto ────────────────────────────────────────────────────────
 st.markdown("""
-<div class="upload-zone">
-    <div class="upload-icon">📷</div>
-    <div class="upload-title">Sube una foto de tu empaque</div>
-    <div class="upload-sub">Superficie plana · buena luz · enfoca la fecha y el estado</div>
+<div style="background:#FFFFFF; border-radius:14px; padding:16px 18px; border:2px dashed #A3C4A0; margin-bottom:16px; text-align:center;">
+    <div style="font-size:2rem; margin-bottom:4px;">📷</div>
+    <div style="font-weight:600; color:#1B4332; font-size:0.95rem;">Toma una foto de tu empaque</div>
+    <div style="color:#6B7B6A; font-size:0.82rem; margin-top:4px;">Coloca el empaque en una superficie plana con buena luz y sube la foto aquí</div>
 </div>
 """, unsafe_allow_html=True)
 
-foto = st.file_uploader("Foto", type=["jpg","jpeg","png","webp"], label_visibility="collapsed")
+foto_empaque = st.file_uploader(
+    "Sube la foto de tu empaque",
+    type=["jpg", "jpeg", "png", "webp"],
+    label_visibility="collapsed",
+    help="Toma la foto con buena luz. Enfoca en las costuras, la tapa y cualquier área dañada."
+)
 
-if foto is not None:
-    img_bytes = foto.read()
-    foto_id = f"{foto.name}_{foto.size}"
-    col_img, col_ia = st.columns([1,1])
-    with col_img:
-        st.image(img_bytes, use_container_width=True)
+if foto_empaque is not None:
+    img_bytes = foto_empaque.getvalue()
+    foto_id = f"{foto_empaque.name}_{foto_empaque.size}"
 
-    # Análisis IA
+    st.markdown('<div class="step-label">Tu empaque</div>', unsafe_allow_html=True)
+    col_foto, col_ref = st.columns([1, 1])
+    with col_foto:
+        st.image(img_bytes, caption="Tu empaque", use_container_width=True)
+
     ia_key = None
     try:
         ia_key = st.secrets.get("OPENAI_API_KEY", None)
@@ -357,118 +431,145 @@ if foto is not None:
 
     if ia_key:
         if st.session_state.get("ia_foto_id") != foto_id:
-            with col_ia:
+            with col_ref:
                 with st.spinner("Analizando..."):
                     ia_resultado = analizar_empaque(img_bytes, ia_key)
-
             if ia_resultado and ia_resultado.get("exito"):
                 st.session_state.ia_datos = ia_resultado["datos"]
                 st.session_state.ia_foto_id = foto_id
                 st.rerun()
             else:
-                with col_ia:
-                    err = ia_resultado.get("error","Error") if ia_resultado else "Error al analizar"
+                with col_ref:
+                    err = ia_resultado.get("error", "Error") if ia_resultado else "Error al analizar"
                     st.warning(err)
         else:
             d = st.session_state.ia_datos
+            producto_detectado = d.get("producto")
             daños_ia = d.get("daños", [])
             confianza = d.get("confianza", "media")
-
-            with col_ia:
+            with col_ref:
                 st.markdown(f"""
-                <div style="padding:14px;background:#f8f8f8;font-size:0.82rem;color:#111;line-height:1.7;">
+                <div style="background:#F0FDF4; border-radius:10px; padding:12px; font-size:0.82rem; color:#065F46; height:100%;">
                     <span class="ia-tag">IA</span><br>
                     <b>{producto_detectado or 'No identificado'}</b><br>
                     {"📅 " + fecha_detectada if fecha_detectada else "📅 Fecha no visible"}<br>
                     {"⚠️ " + ", ".join(daños_ia) if daños_ia else "✅ Sin daños visibles"}<br>
-                    <span style="color:#999;font-size:0.75rem;">Confianza: {confianza}</span>
+                    <span style="color:#6B7B6A;font-size:0.75rem;">Confianza: {confianza}</span>
                 </div>
                 """, unsafe_allow_html=True)
     else:
-        with col_ia:
+        with col_ref:
             st.markdown("""
-            <div style="padding:14px;background:#f8f8f8;font-size:0.82rem;color:#666;line-height:1.6;">
-                Compara con la guía de abajo:<br><br>
-                ¿Golpes, óxido o hinchazón?<br>
-                ¿Sellado intacto?<br>
-                ¿Humedad, manchas o insectos?
+            <div style="background:#F0FDF4; border-radius:10px; padding:12px; font-size:0.82rem; color:#065F46; height:100%;">
+                <b>Compara con la guía de abajo ↓</b><br><br>
+                Mira tu foto y busca:<br>
+                🔍 ¿Hay golpes, óxido o hinchazón?<br>
+                🔍 ¿El sellado está intacto?<br>
+                🔍 ¿Hay humedad, manchas o insectos?
             </div>
             """, unsafe_allow_html=True)
+    st.markdown("")
 
-# Imágenes de referencia (placeholder para tus Canva)
-st.markdown(f"""
-<div class="ref-row">
-    <div class="ref-card">🟢<br>SEGURO<br><span style="font-weight:300;font-size:0.7rem;">Sin daños visibles</span></div>
-    <div class="ref-card ref-card-warn">🟡<br>REVISAR<br><span style="font-weight:300;font-size:0.7rem;">Daño menor</span></div>
-    <div class="ref-card ref-card-danger">🔴<br>NO CONSUMIR<br><span style="font-weight:300;font-size:0.7rem;">Daño grave</span></div>
-</div>
-<div style="font-size:0.72rem;color:#999;margin-bottom:8px;">← Aquí irán tus imágenes de Canva</div>
-""", unsafe_allow_html=True)
+# Imágenes de referencia visual (simuladas con HTML)
+st.markdown(get_ilustraciones(tipo_empaque), unsafe_allow_html=True)
 
-preguntas = PREGUNTAS.get(tipo_empaque, PREGUNTAS["general"])
+# Checkboxes de estado
+preguntas = PREGUNTAS_EMPAQUE.get(tipo_empaque, PREGUNTAS_EMPAQUE["general"])
 respuestas = []
-for pregunta, nivel, exp in preguntas:
-    r = st.checkbox(pregunta, help=exp)
-    respuestas.append((r, nivel, exp, pregunta))
+
+if "info_visible" not in st.session_state:
+    st.session_state.info_visible = set()
+
+for idx, (pregunta, nivel, explicacion) in enumerate(preguntas):
+    info_key = f"{tipo_empaque}_{idx}"
+    col_check, col_info = st.columns([0.85, 0.15])
+    with col_check:
+        resp = st.checkbox(pregunta, key=f"chk_{info_key}")
+    with col_info:
+        if st.button("?", key=f"info_{info_key}", help=explicacion):
+            if info_key in st.session_state.info_visible:
+                st.session_state.info_visible.discard(info_key)
+            else:
+                st.session_state.info_visible.add(info_key)
+    if info_key in st.session_state.info_visible:
+        st.caption(f"ℹ️ {explicacion}")
+    respuestas.append((resp, nivel, explicacion, pregunta))
 
 st.markdown("")
 
-# ── RESULTADO ─────────────────────────────────────────────────────────────
-if st.button("Ver resultado"):
-    hay_danger = any(r and n == "danger" for r, n, _, _ in respuestas)
-    hay_warning = any(r and n == "warning" for r, n, _, _ in respuestas)
-    problemas = [(e, p) for r, n, e, p in respuestas if r]
+# ─── PASO 4: Resultado ─────────────────────────────────────────────────────
+st.markdown('<div class="step-label">Paso 4 · Obtén tu resultado</div>', unsafe_allow_html=True)
 
+if st.button("🔍 Ver resultado", use_container_width=True, type="primary"):
+
+    hay_danger = any(r and nivel == "danger" for r, nivel, _, _ in respuestas)
+    hay_warning = any(r and nivel == "warning" for r, nivel, _, _ in respuestas)
+    problemas = [(exp, p) for r, nivel, exp, p in respuestas if r]
+
+    # Lógica de decisión
     if hay_danger:
         decision = "danger"
-    elif hay_warning and es_caducidad and dias < -30:
+    elif hay_warning and es_caducidad and dias_diferencia < -30:
         decision = "danger"
-    elif hay_warning or (es_caducidad and dias < 0):
+    elif hay_warning:
         decision = "caution"
-    elif not es_caducidad and dias < -365:
+    elif es_caducidad and dias_diferencia < -14:
+        decision = "caution"
+    elif es_caducidad and dias_diferencia < 0:
+        decision = "caution"
+    elif not es_caducidad and dias_diferencia < -365:
         decision = "caution"
     else:
         decision = "safe"
 
-    if dias > 0:
-        estado_fecha = f"Faltan {dias} días para la fecha indicada."
-    elif dias == 0:
+    # Mensaje de días
+    if dias_diferencia > 0:
+        estado_fecha = f"Faltan {dias_diferencia} días para la fecha indicada."
+    elif dias_diferencia == 0:
         estado_fecha = "Hoy es el último día de la fecha indicada."
     else:
-        estado_fecha = f"Lleva {abs(dias)} días pasado la fecha indicada."
+        estado_fecha = f"Lleva {abs(dias_diferencia)} días pasado la fecha indicada."
 
-    tip = TIPS.get(tipo_empaque, "")
-    razones = " · ".join([p for _, p in problemas]) if problemas else ""
+    tip = TIPS_POR_PRODUCTO.get(tipo_empaque, "")
 
     if decision == "safe":
         st.markdown(f"""
-        <div class="result-box result-safe">
-            <div class="result-verdict">✓ Puedes comerlo</div>
-            <div class="result-body">{estado_fecha} El empaque está en buen estado.</div>
-            <div class="result-tip">{tip}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    elif decision == "caution":
-        st.markdown(f"""
-        <div class="result-box result-caution">
-            <div class="result-verdict">⚠ Revisa bien</div>
-            <div class="result-body">{estado_fecha}{f" {razones}" if razones else ""}</div>
-            <div class="result-tip">{tip}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown(f"""
-        <div class="result-box result-danger">
-            <div class="result-verdict">✕ No lo consumas</div>
-            <div class="result-body">{estado_fecha}{f" {razones}" if razones else ""}</div>
-            <div class="result-tip">💡 Antes de tirar, considera si puede compostarse.</div>
+        <div class="result-safe">
+            <div class="result-emoji">✅</div>
+            <div class="result-title">Puedes comerlo</div>
+            <div class="result-reason">{estado_fecha} El empaque está en buen estado y no encontramos señales de riesgo.</div>
+            <div class="tip-box">{tip}</div>
         </div>
         """, unsafe_allow_html=True)
 
-# ── FOOTER ────────────────────────────────────────────────────────────────
+    elif decision == "caution":
+        razones = "<br>".join([f"• {exp}" for exp, _ in problemas]) if problemas else "• La fecha ya pasó. Revisa bien antes de consumir."
+        st.markdown(f"""
+        <div class="result-caution">
+            <div class="result-emoji">⚠️</div>
+            <div class="result-title">Revisa antes de comer</div>
+            <div class="result-reason">{estado_fecha}</div>
+            <div class="result-reason">{razones}</div>
+            <div class="tip-box">{tip}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    else:
+        razones = "<br>".join([f"• {exp}" for exp, _ in problemas]) if problemas else "• La fecha de caducidad pasó hace más de dos semanas."
+        st.markdown(f"""
+        <div class="result-danger">
+            <div class="result-emoji">🚫</div>
+            <div class="result-title">No lo consumas</div>
+            <div class="result-reason">{estado_fecha}</div>
+            <div class="result-reason">{razones}</div>
+            <div class="tip-box">💡 Antes de tirarlo, considera si puede compostarse. ¿Tienes acceso a composta en tu colonia?</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+# ─── Footer ────────────────────────────────────────────────────────────────
 st.markdown("""
-<div class="footer">
-    DISCO SOPA PITIC · HERMOSILLO, SONORA · 2026<br>
-    Herramienta orientativa. En caso de duda, no consumas el alimento.
+<div class="footer-note">
+    Disco Sopa Pitic · Hermosillo, Sonora · Proyecto prototipo 2025<br>
+    Esta herramienta es orientativa. En caso de duda, no consumas el alimento.
 </div>
 """, unsafe_allow_html=True)
