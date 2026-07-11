@@ -21,10 +21,11 @@ def svg_card(svg_content, estado, label, sublabel):
 
 def wrap_row(cards_html):
     """Envuelve las tarjetas en un flex row."""
-    return f"""
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 6px 0;">
-        {cards_html}
-    </div>"""
+    return (
+        '<div style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 6px 0;">'
+        f'{cards_html}'
+        '</div>'
+    )
 
 
 # ─── LATAS ──────────────────────────────────────────────────────────────────
