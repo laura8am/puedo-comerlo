@@ -564,6 +564,7 @@ if foto_empaque is not None:
                 datos["producto"] = _valor_o_none(datos.get("producto"))
                 datos["fecha"] = _valor_o_none(datos.get("fecha"))
                 datos["tipo_fecha"] = _valor_o_none(datos.get("tipo_fecha"))
+                datos["vida_util"] = _valor_o_none(datos.get("vida_util"))
                 daños_detectados = [d for d in (datos.get("daños") or []) if _valor_o_none(d)]
                 datos["daños"] = daños_detectados
 
@@ -583,6 +584,7 @@ if foto_empaque is not None:
             daños_ia = d.get("daños", [])
             confianza = d.get("confianza", "media")
             tipo_detectado = d.get("tipo_empaque")
+            vida_util = d.get("vida_util")
 
             aviso_categoria = ""
             if tipo_detectado and tipo_detectado != tipo_empaque:
@@ -591,12 +593,20 @@ if foto_empaque is not None:
                 elif tipo_detectado not in CATEGORIAS_PERECEDERAS and tipo_empaque in CATEGORIAS_PERECEDERAS:
                     aviso_categoria = '<br><span style="color:#9A3412;">💡 Parece no perecedero — cambia a "📦 No perecedero" en el Paso 1 para preguntas más precisas.</span>'
 
+            # Los perecederos no tienen fecha (Paso 2 se salta para ellos), así
+            # que la línea de fecha no aplica; para fruta_verdura mostramos en
+            # su lugar la vida útil típica que estimó la IA para ese producto.
+            if tipo_detectado in CATEGORIAS_PERECEDERAS:
+                linea_fecha = f"🕒 {vida_util}<br>" if vida_util else ""
+            else:
+                linea_fecha = ("📅 " + fecha_detectada if fecha_detectada else "📅 Fecha no visible") + "<br>"
+
             with col_ref:
                 st.markdown(f"""
                 <div style="background:#F0FDF4; border-radius:10px; padding:12px; font-size:0.82rem; color:#065F46; height:100%;">
                     <span class="ia-tag">IA</span><br>
                     <b>{producto_detectado or 'No identificado'}</b><br>
-                    {"📅 " + fecha_detectada if fecha_detectada else "📅 Fecha no visible"}<br>
+                    {linea_fecha}
                     {"⚠️ " + ", ".join(daños_ia) if daños_ia else "✅ Sin daños visibles"}<br>
                     <span style="color:#6B7B6A;font-size:0.75rem;">Confianza: {confianza}</span>{aviso_categoria}
                 </div>

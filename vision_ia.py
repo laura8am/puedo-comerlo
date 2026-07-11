@@ -29,6 +29,7 @@ Responde ÚNICAMENTE con un JSON válido, sin texto adicional:
   "fecha": "fecha en formato YYYY-MM-DD o null si no se ve",
   "tipo_fecha": "caducidad o consumo_preferente o null",
   "daños": ["lista de daños visibles: inflada, abombada, oxido, golpe_costura, golpe_cuerpo, roto, perforado, humedad, manchas, moho, insectos, sello_roto, tapa_abombada, agrio, decolorado, textura_pegajosa"],
+  "vida_util": "para fruta_verdura: estimado típico de vida útil a temperatura ambiente o refrigerada para ESE producto específico, ej. 'Plátano: 3-5 días a temperatura ambiente' o null si tipo_empaque no es fruta_verdura",
   "confianza": "alta, media o baja",
   "mensaje": "frase corta en español de máximo 15 palabras"
 }
@@ -65,7 +66,7 @@ Si es un no perecedero, usa la categoría de empaque que corresponda (lata, empa
 
         resultado = json.loads(texto)
 
-        for campo in ["producto", "tipo_empaque", "fecha", "tipo_fecha", "daños", "confianza", "mensaje"]:
+        for campo in ["producto", "tipo_empaque", "fecha", "tipo_fecha", "daños", "vida_util", "confianza", "mensaje"]:
             if campo not in resultado:
                 resultado[campo] = None
 
