@@ -278,10 +278,17 @@ producto_sel = st.selectbox("Producto", list(PRODUCTOS.keys()), label_visibility
 tipo_empaque = PRODUCTOS[producto_sel]
 
 # ── Variables IA ──────────────────────────────────────────────────────────
+# Persistidas en session_state: Streamlit corre todo el script de nuevo en cada
+# interacción, así que lo que la IA detecta en el Paso 3 (más abajo) solo puede
+# rellenar los campos del Paso 2 (más arriba) en el rerun siguiente, no en el
+# mismo. Ver el st.rerun() tras guardar el resultado del análisis.
+if "ia_datos" not in st.session_state:
+    st.session_state.ia_datos = {}
+
 ia_resultado = None
-producto_detectado = None
-fecha_detectada = None
-tipo_fecha_detectado = None
+producto_detectado = st.session_state.ia_datos.get("producto")
+fecha_detectada = st.session_state.ia_datos.get("fecha")
+tipo_fecha_detectado = st.session_state.ia_datos.get("tipo_fecha")
 
 # ── PASO 2 ────────────────────────────────────────────────────────────────
 st.markdown('<div class="step">Paso 2 · ¿Qué dice la etiqueta?</div>', unsafe_allow_html=True)
@@ -329,6 +336,7 @@ foto = st.file_uploader("Foto", type=["jpg","jpeg","png","webp"], label_visibili
 
 if foto is not None:
     img_bytes = foto.read()
+    foto_id = f"{foto.name}_{foto.size}"
     col_img, col_ia = st.columns([1,1])
     with col_img:
         st.image(img_bytes, use_container_width=True)
@@ -341,15 +349,21 @@ if foto is not None:
         pass
 
     if ia_key:
-        with col_ia:
-            with st.spinner("Analizando..."):
-                ia_resultado = analizar_empaque(img_bytes, ia_key)
+        if st.session_state.get("ia_foto_id") != foto_id:
+            with col_ia:
+                with st.spinner("Analizando..."):
+                    ia_resultado = analizar_empaque(img_bytes, ia_key)
 
-        if ia_resultado and ia_resultado.get("exito"):
-            d = ia_resultado["datos"]
-            producto_detectado = d.get("producto")
-            fecha_detectada = d.get("fecha")
-            tipo_fecha_detectado = d.get("tipo_fecha")
+            if ia_resultado and ia_resultado.get("exito"):
+                st.session_state.ia_datos = ia_resultado["datos"]
+                st.session_state.ia_foto_id = foto_id
+                st.rerun()
+            else:
+                with col_ia:
+                    err = ia_resultado.get("error","Error") if ia_resultado else "Error al analizar"
+                    st.warning(err)
+        else:
+            d = st.session_state.ia_datos
             daños_ia = d.get("daños", [])
             confianza = d.get("confianza", "media")
 
@@ -363,10 +377,6 @@ if foto is not None:
                     <span style="color:#999;font-size:0.75rem;">Confianza: {confianza}</span>
                 </div>
                 """, unsafe_allow_html=True)
-        else:
-            with col_ia:
-                err = ia_resultado.get("error","Error") if ia_resultado else "Error al analizar"
-                st.warning(err)
     else:
         with col_ia:
             st.markdown("""
