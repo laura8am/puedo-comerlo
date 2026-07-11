@@ -223,7 +223,7 @@ st.markdown("""
 st.markdown("""
 <div class="header-block">
     <div class="header-title">🥫 ¿Puedo comerlo?</div>
-    <div class="header-sub">Descubre si tu alimento todavía es seguro · Disco Sopa Pitic</div>
+    <div class="header-sub">Descubre si tu alimento todavía es seguro</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -570,7 +570,7 @@ if st.button("🔍 Ver resultado", use_container_width=True, type="primary"):
 # ─── Footer ────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="footer-note">
-    Disco Sopa Pitic · Hermosillo, Sonora · Proyecto prototipo 2025<br>
+    Disco Sopa Pitic · Hermosillo, Sonora · Proyecto prototipo 2026<br>
     Esta herramienta es orientativa. En caso de duda, no consumas el alimento.
 </div>
 """, unsafe_allow_html=True)
