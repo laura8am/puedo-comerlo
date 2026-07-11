@@ -21,24 +21,23 @@ st.set_page_config(
 # ─── Estilos CSS ───────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Serif+Display&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
     html, body, [class*="css"] {
-        font-family: 'DM Sans', sans-serif;
-        background-color: #F5E6C8;
+        font-family: 'Inter', sans-serif;
+        background-color: #FFFFFF;
     }
 
     .stApp {
-        background-color: #F5E6C8;
+        background-color: #FFFFFF;
     }
 
     h1, h2, h3 {
-        font-family: 'DM Serif Display', serif;
+        font-family: 'Inter', sans-serif;
         color: #1B4332;
     }
 
     .header-block {
-        background-color: #1B4332;
         border-radius: 16px;
         padding: 24px 28px 20px 28px;
         margin-bottom: 28px;
@@ -46,15 +45,16 @@ st.markdown("""
     }
 
     .header-title {
-        color: #F5E6C8;
-        font-family: 'DM Serif Display', serif;
+        color: #1B4332;
+        font-family: 'Inter', sans-serif;
+        font-weight: 700;
         font-size: 2.2rem;
         margin: 0;
         line-height: 1.2;
     }
 
     .header-sub {
-        color: #A3C4A0;
+        color: #6B7B6A;
         font-size: 0.95rem;
         margin-top: 6px;
     }
@@ -142,7 +142,8 @@ st.markdown("""
     }
 
     .result-title {
-        font-family: 'DM Serif Display', serif;
+        font-family: 'Inter', sans-serif;
+        font-weight: 700;
         font-size: 1.8rem;
         margin: 0 0 10px 0;
         color: #1B4332;
