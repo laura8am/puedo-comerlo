@@ -5,7 +5,17 @@ para la app ¿Puedo comerlo? de Disco Sopa Pitic
 
 import json
 import base64
-from openai import OpenAI
+from openai import (
+    OpenAI,
+    APIConnectionError,
+    APITimeoutError,
+    AuthenticationError,
+    RateLimitError,
+    BadRequestError,
+    APIStatusError,
+)
+
+TIMEOUT_SEGUNDOS = 30
 
 
 def analizar_empaque(imagen_bytes, api_key):
@@ -13,7 +23,7 @@ def analizar_empaque(imagen_bytes, api_key):
     Analiza una imagen de un alimento (perecedero o no) usando OpenAI Vision.
     Devuelve dict con producto, fecha, tipo_fecha, daños, confianza, mensaje.
     """
-    client = OpenAI(api_key=api_key)
+    client = OpenAI(api_key=api_key, timeout=TIMEOUT_SEGUNDOS)
 
     imagen_b64 = base64.b64encode(imagen_bytes).decode("utf-8")
 
@@ -82,11 +92,17 @@ Si es un no perecedero, usa la categoría de empaque que corresponda (lata, empa
 
     except json.JSONDecodeError:
         return {"exito": False, "error": "No pude leer la respuesta. Intenta con otra foto más clara.", "datos": None}
+    except AuthenticationError:
+        return {"exito": False, "error": "API key inválida. Revisa tu clave en los secretos de Streamlit.", "datos": None}
+    except RateLimitError:
+        return {"exito": False, "error": "Se alcanzó el límite de uso de OpenAI (o no hay crédito disponible). Espera un momento o revisa tu cuenta.", "datos": None}
+    except APITimeoutError:
+        return {"exito": False, "error": "La IA tardó demasiado en responder. Intenta de nuevo.", "datos": None}
+    except APIConnectionError:
+        return {"exito": False, "error": "No se pudo conectar con OpenAI. Revisa tu conexión a internet e intenta de nuevo.", "datos": None}
+    except BadRequestError:
+        return {"exito": False, "error": "La foto no se pudo procesar (puede ser muy pesada o un formato no soportado). Intenta con otra.", "datos": None}
+    except APIStatusError as e:
+        return {"exito": False, "error": f"El servidor de OpenAI respondió con un error ({e.status_code}). Intenta más tarde.", "datos": None}
     except Exception as e:
-        error_msg = str(e)
-        if "invalid_api_key" in error_msg or "Incorrect API key" in error_msg:
-            return {"exito": False, "error": "API key inválida. Revisa tu clave en los secretos de Streamlit.", "datos": None}
-        elif "quota" in error_msg.lower() or "billing" in error_msg.lower():
-            return {"exito": False, "error": "Sin crédito disponible en OpenAI. Revisa tu cuenta.", "datos": None}
-        else:
-            return {"exito": False, "error": f"Error al analizar: {error_msg}", "datos": None}
+        return {"exito": False, "error": f"Error al analizar: {e}", "datos": None}
