@@ -14,6 +14,7 @@ from openai import (
     BadRequestError,
     APIStatusError,
 )
+from logica import valor_o_none
 
 TIMEOUT_SEGUNDOS = 30
 
@@ -27,13 +28,14 @@ def analizar_empaque(imagen_bytes, api_key):
 
     imagen_b64 = base64.b64encode(imagen_bytes).decode("utf-8")
 
-    prompt = """Eres un experto en seguridad alimentaria. Analiza esta imagen de un alimento, sea no perecedero (con empaque sellado de fábrica) o perecedero (fresco, refrigerado, sin empaque sellado).
+    prompt = """Eres un experto en seguridad alimentaria. Analiza esta imagen. Primero determina si lo que ves es realmente un alimento (comida o bebida) — no un objeto, utensilio, planta, mascota, persona, etc.
 
 Responde ÚNICAMENTE con un JSON válido, sin texto adicional:
 
 {
-  "producto": "nombre del producto que ves",
-  "tipo_empaque": "uno de: lata, empaque_seco, empaque_flexible, botella, frasco, caja, general, lacteos, carne_pescado, fruta_verdura, panaderia_fresca",
+  "es_alimento": true o false,
+  "producto": "nombre de lo que ves, sea alimento u objeto",
+  "tipo_empaque": "uno de: lata, empaque_seco, empaque_flexible, botella, frasco, caja, general, lacteos, carne_pescado, fruta_verdura, panaderia_fresca (usa 'general' si es_alimento es false)",
   "fecha": "fecha en formato YYYY-MM-DD o null si no se ve",
   "tipo_fecha": "caducidad o consumo_preferente o null",
   "daños": ["lista de daños visibles: inflada, abombada, oxido, golpe_costura, golpe_cuerpo, roto, perforado, humedad, manchas, moho, insectos, sello_roto, tapa_abombada, agrio, decolorado, textura_pegajosa"],
@@ -41,6 +43,8 @@ Responde ÚNICAMENTE con un JSON válido, sin texto adicional:
   "confianza": "alta, media o baja",
   "mensaje": "frase corta en español de máximo 15 palabras"
 }
+
+Si "es_alimento" es false, deja "daños" como una lista vacía y el resto de los campos que no apliquen en null — no evalúes seguridad ni inventes daños para algo que no es comida.
 
 Guía para "tipo_empaque" en perecederos:
 - "lacteos": leche, yogurt, queso, crema.
@@ -74,9 +78,13 @@ Si es un no perecedero, usa la categoría de empaque que corresponda (lata, empa
 
         resultado = json.loads(texto)
 
-        for campo in ["producto", "tipo_empaque", "fecha", "tipo_fecha", "daños", "vida_util", "confianza", "mensaje"]:
+        for campo in ["es_alimento", "producto", "tipo_empaque", "fecha", "tipo_fecha", "daños", "vida_util", "confianza", "mensaje"]:
             if campo not in resultado:
                 resultado[campo] = None
+
+        if resultado.get("es_alimento") is False:
+            objeto = valor_o_none(resultado.get("producto")) or "lo que subiste"
+            return {"exito": False, "error": f"Esto no parece ser un alimento ({objeto}). Sube una foto de tu comida.", "datos": None}
 
         TIPOS_VALIDOS = [
             "lata", "empaque_seco", "empaque_flexible", "botella", "frasco", "caja", "general",
