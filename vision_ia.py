@@ -30,10 +30,12 @@ def analizar_empaque(imagen_bytes, api_key):
 
     prompt = """Eres un experto en seguridad alimentaria. Analiza esta imagen. Primero determina si lo que ves es realmente un alimento (comida o bebida) — no un objeto, utensilio, planta, mascota, persona, etc.
 
+"es_alimento" es OBLIGATORIO y debe ser literalmente el booleano true o false — nunca null ni omitirlo. Si tienes cualquier duda de que sea comida, responde false.
+
 Responde ÚNICAMENTE con un JSON válido, sin texto adicional:
 
 {
-  "es_alimento": true o false,
+  "es_alimento": true o false (obligatorio, nunca null),
   "producto": "nombre de lo que ves, sea alimento u objeto",
   "tipo_empaque": "uno de: lata, empaque_seco, empaque_flexible, botella, frasco, caja, general, lacteos, carne_pescado, fruta_verdura, panaderia_fresca (usa 'general' si es_alimento es false)",
   "fecha": "fecha en formato YYYY-MM-DD o null si no se ve",
@@ -82,7 +84,11 @@ Si es un no perecedero, usa la categoría de empaque que corresponda (lata, empa
             if campo not in resultado:
                 resultado[campo] = None
 
-        if resultado.get("es_alimento") is False:
+        # Estricto a propósito: solo seguimos si la IA confirmó explícitamente
+        # que es un alimento. Si no contestó ese campo, lo dejó en null, o dijo
+        # que no, lo tratamos como "no es comida" — es preferible rechazar de
+        # más a que un objeto cualquiera termine evaluado como "seguro".
+        if resultado.get("es_alimento") is not True:
             objeto = valor_o_none(resultado.get("producto")) or "lo que subiste"
             return {"exito": False, "error": f"Esto no parece ser un alimento ({objeto}). Sube una foto de tu comida.", "datos": None}
 
