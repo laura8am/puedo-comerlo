@@ -1,6 +1,7 @@
 import streamlit as st
 from datetime import date
 from ilustraciones import get_ilustraciones
+from recoleccion import guardar_muestra
 from logica import (
     PRODUCTOS_NO_PERECEDEROS,
     PRODUCTOS_PERECEDEROS,
@@ -355,6 +356,8 @@ foto_empaque = st.file_uploader(
     help="Toma la foto con buena luz. Enfoca en las costuras, la tapa y cualquier área dañada."
 )
 
+consentimiento_recoleccion = False
+
 if foto_empaque is not None:
     img_bytes = foto_empaque.getvalue()
     foto_id = f"{foto_empaque.name}_{foto_empaque.size}"
@@ -363,6 +366,12 @@ if foto_empaque is not None:
     col_foto, col_ref = st.columns([1, 1])
     with col_foto:
         st.image(img_bytes, caption="Tu empaque", use_container_width=True)
+
+    consentimiento_recoleccion = st.checkbox(
+        "📸 Ayúdanos a mejorar la IA: guarda esta foto junto con mi respuesta final (anónimo)",
+        value=False,
+        help="Se usa para armar un dataset con el que a futuro entrenar un modelo propio. No se guarda nada si dejas esto sin marcar."
+    )
 
     ia_key = None
     try:
@@ -481,6 +490,19 @@ if st.button("🔍 Ver resultado", use_container_width=True, type="primary"):
     # así que su decisión depende solo de las respuestas del Paso 3.
     decision = decidir(hay_danger, hay_warning, es_caducidad, dias_diferencia, es_perecedero_actual)
     estado_fecha = mensaje_estado_fecha(es_perecedero_actual, dias_diferencia)
+
+    if foto_empaque is not None and consentimiento_recoleccion:
+        try:
+            extension = foto_empaque.name.rsplit(".", 1)[-1] if "." in foto_empaque.name else "jpg"
+            guardar_muestra(img_bytes, extension, {
+                "tipo_empaque": tipo_empaque,
+                "es_perecedero": es_perecedero_actual,
+                "ia_datos": st.session_state.ia_datos if st.session_state.get("ia_foto_id") == foto_id else None,
+                "respuestas": [{"pregunta": p, "marcada": r} for r, _, _, p in respuestas],
+                "decision_final": decision,
+            })
+        except Exception:
+            pass  # nunca interrumpir el resultado del usuario por un fallo al guardar
 
     tip = TIPS_POR_PRODUCTO.get(tipo_empaque, "")
     fila_estado_fecha = f'<div class="result-reason">{estado_fecha}</div>' if estado_fecha else ""
